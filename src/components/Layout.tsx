@@ -1,13 +1,16 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Building2, Key, Users, Wallet, LogOut, FileText, MessageSquare, Wrench, CreditCard, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Building2, Key, Users, Wallet, LogOut, FileText, MessageSquare, Wrench, CreditCard, UserCircle, Download } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
+import { usePWAInstall } from '../utils/usePWAInstall';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { promptInstall } = usePWAInstall();
 
   const handleLogout = () => {
     logout();
@@ -32,7 +35,6 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Payments', path: '/payments', icon: CreditCard },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
-    { name: 'My Profile', path: '/profile', icon: UserCircle },
   ];
 
   const navItems = isTenant ? tenantNav : ownerNav;
@@ -48,7 +50,6 @@ export default function Layout({ children }: { children: ReactNode }) {
             <p className="text-[9px] tracking-widest text-gold uppercase">{isTenant ? 'Tenant Portal' : 'Landlord Portal'}</p>
           </div>
         </div>
-        
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -63,11 +64,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-
-        {/* Cleaned up sidebar footer */}
         <div className="p-4 border-t border-gray-800">
-          <InstallPWA />
-          
           <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-gray-400 hover:text-danger w-full px-4 py-2 mt-2">
             <LogOut size={18} /> Sign Out
           </button>
@@ -80,14 +77,59 @@ export default function Layout({ children }: { children: ReactNode }) {
           <h1 className="font-display text-xl md:text-2xl capitalize text-black">
             {location.pathname === '/' ? (isTenant ? 'Tenant Dashboard' : 'Dashboard') : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
           </h1>
-          <div className="w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold text-sm cursor-pointer">
-            {user?.full_name?.split(' ').map(n => n[0]).join('')}
+          
+          {/* Avatar Dropdown Menu */}
+          <div className="relative">
+            <div 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              {user?.full_name?.split(' ').map(n => n[0]).join('')}
+            </div>
+
+            {isMenuOpen && (
+              <>
+                {/* Click-away overlay */}
+                <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden fade-in">
+                  <div className="p-4 border-b border-gray-100 bg-gray-50">
+                    <p className="font-bold text-black truncate">{user?.full_name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                  </div>
+                  <div className="p-2 space-y-1">
+                    {isTenant && (
+                      <Link 
+                        to="/profile" 
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <UserCircle size={16} /> My Profile
+                      </Link>
+                    )}
+                    <button 
+                      onClick={() => { promptInstall(); setIsMenuOpen(false); }}
+                      className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-left"
+                    >
+                      <Download size={16} /> Install App
+                    </button>
+                    <button 
+                      onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                      className="flex items-center gap-3 w-full p-2 text-sm font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors text-left"
+                    >
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </header>
-                <div className="p-4 md:p-8 max-w-6xl mx-auto w-full flex-1">
+        
+        <div className="p-4 md:p-8 max-w-6xl mx-auto w-full flex-1">
           {/* Mobile Install Banner */}
           <InstallPWA />
-          
           {children}
         </div>
       </main>
