@@ -16,7 +16,6 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const isTenant = user?.role === 'tenant';
 
-  // ADDED 'Messages' to the Owner Navigation
   const ownerNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Properties', path: '/properties', icon: Building2 },
@@ -49,6 +48,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <p className="text-[9px] tracking-widest text-gold uppercase">{isTenant ? 'Tenant Portal' : 'Landlord Portal'}</p>
           </div>
         </div>
+        
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -63,16 +63,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Cleaned up sidebar footer */}
         <div className="p-4 border-t border-gray-800">
-                  <div className="p-4 border-t border-gray-800">
-          {/* Add the PWA install button here */}
           <InstallPWA />
           
           <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-gray-400 hover:text-danger w-full px-4 py-2 mt-2">
-            <LogOut size={18} /> Sign Out
-          </button>
-        </div>
-          <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-gray-400 hover:text-danger w-full px-4 py-2">
             <LogOut size={18} /> Sign Out
           </button>
         </div>
@@ -88,7 +84,10 @@ export default function Layout({ children }: { children: ReactNode }) {
             {user?.full_name?.split(' ').map(n => n[0]).join('')}
           </div>
         </header>
-        <div className="p-4 md:p-8 max-w-6xl mx-auto w-full flex-1">
+                <div className="p-4 md:p-8 max-w-6xl mx-auto w-full flex-1">
+          {/* Mobile Install Banner */}
+          <InstallPWA />
+          
           {children}
         </div>
       </main>
