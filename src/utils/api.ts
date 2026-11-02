@@ -1,4 +1,4 @@
-const API_URL = 'https://jumpproptech.site.je/api';
+const API_URL = 'https://jumpproptech-api.onrender.com/api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
