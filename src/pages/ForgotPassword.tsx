@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [debugLink, setDebugLink] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,12 +13,10 @@ export default function ForgotPassword() {
     setLoading(true);
     setError('');
     setMessage('');
-    setDebugLink('');
     
     try {
       const res = await api.forgotPassword(email);
       setMessage(res.message);
-      if (res.debug_link) setDebugLink(res.debug_link);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -38,17 +35,10 @@ export default function ForgotPassword() {
         </div>
 
         <h2 className="font-display text-2xl text-ivory mb-2">Reset Password</h2>
-        <p className="text-sm text-gray-400 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
+        <p className="text-sm text-gray-400 mb-6">Enter your email address and we'll send you a secure link to reset your password.</p>
 
         {error && <div className="bg-danger/20 border-l-4 border-danger text-red-200 p-3 rounded text-sm mb-6">{error}</div>}
         {message && <div className="bg-success/20 border-l-4 border-success text-green-200 p-3 rounded text-sm mb-6">{message}</div>}
-
-        {debugLink && (
-          <div className="bg-blue-900/30 border border-blue-500 text-blue-200 p-3 rounded text-sm mb-6 break-all">
-            <strong>Testing Mode:</strong> <br/>
-            <a href={debugLink} className="underline text-blue-300">Click here to reset your password</a>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
