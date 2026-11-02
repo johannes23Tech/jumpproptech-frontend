@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
-import { Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -75,6 +75,16 @@ export default function Login() {
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Password</label>
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-ivory focus:border-gold outline-none" />
           </div>
+          
+          {/* ADDED FORGOT PASSWORD LINK HERE */}
+          {!isRegistering && (
+            <div className="flex justify-end pt-1">
+              <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-gold transition-colors">
+                Forgot Password?
+              </Link>
+            </div>
+          )}
+
           <button type="submit" disabled={loading} className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-4 hover:opacity-90 disabled:opacity-50 transition-opacity">
             {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Sign In')}
           </button>

@@ -48,6 +48,23 @@ export const api = {
     });
     return handleResponse(res);
   },
+    forgotPassword: async (email: string) => {
+    const res = await fetch(`${API_URL}/auth/forgot_password.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return handleResponse(res);
+  },
+
+  resetPassword: async (data: any) => {
+    const res = await fetch(`${API_URL}/auth/reset_password.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
 
   // --- DASHBOARD ---
   getDashboardStats: async () => {
