@@ -1,4 +1,4 @@
-const API_URL = 'https://jumpproptech-api.onrender.com/api';
+const API_URL = 'https://jumpproptech-api.onrender.com/api'; 
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -29,16 +29,6 @@ export const api = {
     });
     return handleResponse(res);
   },
-  // Add this inside `export const api = { ... }` right below assignContractor:
-  
-  resolveMaintenance: async (ticket_id: number) => {
-    const res = await fetch(`${API_URL}/maintenance.php`, { 
-      method: 'POST', 
-      headers: getHeaders(), 
-      body: JSON.stringify({ ticket_id, status: 'Resolved' }) 
-    });
-    return handleResponse(res);
-  },
 
   register: async (userData: any) => {
     const res = await fetch(`${API_URL}/auth/register.php`, {
@@ -48,7 +38,8 @@ export const api = {
     });
     return handleResponse(res);
   },
-    forgotPassword: async (email: string) => {
+
+  forgotPassword: async (email: string) => {
     const res = await fetch(`${API_URL}/auth/forgot_password.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -102,7 +93,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- TENANTS (Landlord Side) ---
+  // --- TENANTS ---
   getTenants: async () => {
     const res = await fetch(`${API_URL}/tenants.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -117,7 +108,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- TENANT DATA (Tenant Side) ---
+  // --- TENANT DATA ---
   getTenantData: async () => {
     const res = await fetch(`${API_URL}/tenant_data.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -137,7 +128,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- MAINTENANCE HUB ---
+  // --- MAINTENANCE ---
   getMaintenanceData: async () => {
     const res = await fetch(`${API_URL}/maintenance.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -161,7 +152,16 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- RENT RECORDS ---
+  resolveMaintenance: async (ticket_id: number) => {
+    const res = await fetch(`${API_URL}/maintenance.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify({ ticket_id, status: 'Resolved' }) 
+    });
+    return handleResponse(res);
+  },
+
+  // --- RENT & RECEIPTS ---
   getRentRecords: async () => {
     const res = await fetch(`${API_URL}/rent.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -199,6 +199,27 @@ export const api = {
       body: JSON.stringify(data) 
     });
     return handleResponse(res);
+  },
+
+  // --- CLOUDINARY IMAGE UPLOAD ---
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    
+    const cloudName = 'mvy6f66e'; 
+    const uploadPreset = 'jumpproptech_preset'; 
+
+    formData.append('upload_preset', uploadPreset);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!res.ok) throw new Error('Failed to upload image to Cloudinary');
+    const data = await res.json();
+    return data.secure_url; // Returns the clean HTTPS image URL
   },
 
   // --- LOCAL STORAGE ---

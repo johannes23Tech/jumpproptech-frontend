@@ -11,6 +11,7 @@ export default function TenantProfile() {
     id_document: ''
   });
   const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     api.getTenantProfile().then(data => {
@@ -19,12 +20,19 @@ export default function TenantProfile() {
     }).catch(console.error);
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // UPDATED: Upload to Cloudinary instead of Base64
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setProfile({ ...profile, id_document: reader.result as string });
-      reader.readAsDataURL(file);
+      setUploading(true);
+      try {
+        const imageUrl = await api.uploadImage(file);
+        setProfile({ ...profile, id_document: imageUrl });
+      } catch (err) {
+        alert("Failed to upload image. Please try again.");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -111,12 +119,12 @@ export default function TenantProfile() {
           <p className="text-xs text-gray-500 mb-4">Upload a clear photo of your SA ID Book, Smart Card, or Passport.</p>
           <div className="flex items-center gap-4">
             <label className="cursor-pointer bg-ivory-dark border border-gray-300 px-6 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors">
-              <Upload size={18} /> Upload Photo
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+              <Upload size={18} /> {uploading ? 'Uploading...' : 'Upload Photo'}
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
             </label>
             {profile.id_document && <span className="text-success text-sm font-bold flex items-center gap-1"><CheckCircle size={16} /> Document Uploaded</span>}
           </div>
-          {profile.id_document && <img src={profile.id_document} alt="ID" className="mt-4 max-h-40 rounded-lg border border-gray-300" />}
+          {profile.id_document && <img src={profile.id_document} alt="ID" className="mt-4 max-h-40 rounded-lg border border-gray-300 object-contain" />}
         </div>
 
         <button type="submit" className="w-full bg-gold text-black font-bold py-4 rounded-xl shadow-lg hover:opacity-90 transition-opacity">Save Profile Changes</button>
