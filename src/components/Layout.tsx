@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Building2, Key, Users, Wallet, LogOut, FileText, MessageSquare, Wrench, CreditCard, UserCircle } from 'lucide-react';
+import InstallPWA from './InstallPWA'; 
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -63,6 +64,14 @@ export default function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="p-4 border-t border-gray-800">
+                  <div className="p-4 border-t border-gray-800">
+          {/* Add the PWA install button here */}
+          <InstallPWA />
+          
+          <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-gray-400 hover:text-danger w-full px-4 py-2 mt-2">
+            <LogOut size={18} /> Sign Out
+          </button>
+        </div>
           <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-gray-400 hover:text-danger w-full px-4 py-2">
             <LogOut size={18} /> Sign Out
           </button>
