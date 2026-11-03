@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
-import { Wrench, Users, DollarSign, FileText, CheckCircle } from 'lucide-react';
+import { Wrench, Users, DollarSign, FileText, CheckCircle, Plus } from 'lucide-react';
 
 export default function LandlordMaintenance() {
   const [activeTab, setActiveTab] = useState('tickets');
   const [data, setData] = useState<{ tickets: any[], contractors: any[] }>({ tickets: [], contractors: [] });
+  const [isContractorModalOpen, setIsContractorModalOpen] = useState(false);
+
+  // Contractor Form State
+  const [cName, setCName] = useState('');
+  const [cTrade, setCTrade] = useState('Plumbing');
+  const [cPhone, setCPhone] = useState('');
 
   const fetchData = async () => {
     try {
@@ -27,6 +33,14 @@ export default function LandlordMaintenance() {
       await api.resolveMaintenance(ticketId);
       fetchData();
     }
+  };
+
+  const handleAddContractor = async (e: FormEvent) => {
+    e.preventDefault();
+    await api.addContractor({ name: cName, trade: cTrade, phone: cPhone });
+    setIsContractorModalOpen(false);
+    setCName(''); setCPhone('');
+    fetchData();
   };
 
   return (
@@ -57,13 +71,9 @@ export default function LandlordMaintenance() {
 
             {data.tickets.map(t => (
               <div key={t.id} className={`flex flex-col md:flex-row gap-4 p-4 border rounded-xl transition-colors ${t.status === 'Resolved' ? 'bg-gray-50 border-gray-200 opacity-75' : 'border-gray-200'}`}>
-                
-                {/* Photo */}
                 <div className="w-full md:w-48 h-32 shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                   {t.photo && <img src={t.photo} alt="Issue" className="w-full h-full object-cover" />}
                 </div>
-
-                {/* Details */}
                 <div className="flex-1 space-y-2">
                   <div className="flex justify-between items-start">
                     <div>
@@ -71,8 +81,6 @@ export default function LandlordMaintenance() {
                       <p className="text-sm text-gray-600">{t.description}</p>
                       <p className="text-xs text-gray-400 mt-1">Reported by: {t.tenant_name}</p>
                     </div>
-                    
-                    {/* Badges */}
                     <div className="flex flex-col items-end gap-2">
                       <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${t.priority === 'Emergency' ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'}`}>
                         {t.priority}
@@ -83,35 +91,22 @@ export default function LandlordMaintenance() {
                     </div>
                   </div>
                   
-                  {/* Actions */}
                   <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-3 items-center">
-                    
                     {t.status !== 'Resolved' ? (
                       <>
-                        <select 
-                          className="border border-gray-300 rounded-lg p-2 text-sm bg-white"
-                          value={t.severity || 'Routine'}
-                          onChange={(e) => handleAssign(t.id, t.contractor_id || '', e.target.value)}
-                        >
+                        <select className="border border-gray-300 rounded-lg p-2 text-sm bg-white" value={t.severity || 'Routine'} onChange={(e) => handleAssign(t.id, t.contractor_id || '', e.target.value)}>
                           <option value="Routine">Routine (1-5 days)</option>
                           <option value="Emergency">Emergency (24h)</option>
                         </select>
 
-                        <select 
-                          className="border border-gray-300 rounded-lg p-2 text-sm bg-white flex-1 min-w-[150px]"
-                          value={t.contractor_id || ''}
-                          onChange={(e) => handleAssign(t.id, e.target.value, t.severity || 'Routine')}
-                        >
+                        <select className="border border-gray-300 rounded-lg p-2 text-sm bg-white flex-1 min-w-[150px]" value={t.contractor_id || ''} onChange={(e) => handleAssign(t.id, e.target.value, t.severity || 'Routine')}>
                           <option value="">-- Assign Contractor --</option>
                           {data.contractors.map(c => (
                             <option key={c.id} value={c.id}>{c.name} ({c.trade})</option>
                           ))}
                         </select>
 
-                        <button 
-                          onClick={() => handleResolve(t.id)}
-                          className="bg-success text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 ml-auto"
-                        >
+                        <button onClick={() => handleResolve(t.id)} className="bg-success text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 ml-auto">
                           <CheckCircle size={16} /> Mark Resolved
                         </button>
                       </>
@@ -129,7 +124,13 @@ export default function LandlordMaintenance() {
 
         {activeTab === 'contractors' && (
           <div>
-            <h3 className="font-display text-lg font-bold mb-4">My Contractor Network</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-display text-lg font-bold">My Contractor Network</h3>
+              <button onClick={() => setIsContractorModalOpen(true)} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 text-sm">
+                <Plus size={16} /> Add Contractor
+              </button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.contractors.map(c => (
                 <div key={c.id} className="p-4 border border-gray-200 rounded-xl">
@@ -148,9 +149,44 @@ export default function LandlordMaintenance() {
           </div>
         )}
 
-        {activeTab === 'finance' && <div className="text-center p-8 text-gray-500">Finance module coming soon (Track contractor invoices & maintenance costs).</div>}
-        {activeTab === 'reports' && <div className="text-center p-8 text-gray-500">Maintenance Reports coming soon.</div>}
+        {activeTab === 'finance' && <div className="text-center p-8 text-gray-500">Finance module coming soon.</div>}
+        {activeTab === 'reports' && <div className="text-center p-8 text-gray-500">Reports coming soon.</div>}
       </div>
+
+      {/* Add Contractor Modal */}
+      {isContractorModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-ivory w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <h3 className="font-display text-xl font-bold mb-4">Add New Contractor</h3>
+            <form onSubmit={handleAddContractor} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contractor Name</label>
+                <input type="text" required value={cName} onChange={(e) => setCName(e.target.value)} className="w-full border p-3 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Trade / Specialty</label>
+                <select value={cTrade} onChange={(e) => setCTrade(e.target.value)} className="w-full border p-3 rounded-lg bg-white">
+                  <option>Plumbing</option>
+                  <option>Electrical</option>
+                  <option>Structural</option>
+                  <option>Appliance Repair</option>
+                  <option>Pest Control</option>
+                  <option>General Handyman</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                <input type="tel" required value={cPhone} onChange={(e) => setCPhone(e.target.value)} className="w-full border p-3 rounded-lg" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setIsContractorModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg">Save Contractor</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

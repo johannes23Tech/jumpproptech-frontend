@@ -20,6 +20,7 @@ import TenantProfile from './pages/TenantProfile';
 
 // Shared Maintenance & Messaging
 import LandlordMaintenance from './pages/LandlordMaintenance';
+import LandlordProfile from './pages/LandlordProfile'; // IMPORTED
 import Messages from './pages/Messages';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -41,12 +42,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public Routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       
-      {/* Shared Root Route */}
       <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
       
       {/* Tenant Only Routes */}
@@ -54,24 +53,23 @@ function AppRoutes() {
       <Route path="/payments" element={<ProtectedRoute><TenantPayments /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><TenantProfile /></ProtectedRoute>} />
 
-      {/* Shared Routes (Split views based on role) */}
+      {/* Shared Routes */}
       <Route path="/maintenance" element={
         <ProtectedRoute>
           {isTenant ? <TenantMaintenance /> : <OwnerRoute><LandlordMaintenance /></OwnerRoute>}
         </ProtectedRoute>
       } />
 
-      {/* Messaging Routes */}
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
       <Route path="/messages/:tenantId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
-      {/* Landlord/Agent Only Routes */}
+      {/* Landlord Only Routes */}
       <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
       <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
       <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
       <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
+      <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
 
-      {/* Fallback for any unknown URL */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

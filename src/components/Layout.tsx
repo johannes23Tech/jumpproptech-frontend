@@ -99,13 +99,21 @@ export default function Layout({ children }: { children: ReactNode }) {
                     <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                   </div>
                   <div className="p-2 space-y-1">
-                    {isTenant && (
+                    {isTenant ? (
                       <Link 
                         to="/profile" 
                         onClick={() => setIsMenuOpen(false)}
                         className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                       >
                         <UserCircle size={16} /> My Profile
+                      </Link>
+                    ) : (
+                      <Link 
+                        to="/landlord-profile" 
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <UserCircle size={16} /> My Account
                       </Link>
                     )}
                     <button 

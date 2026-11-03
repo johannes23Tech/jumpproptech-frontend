@@ -57,6 +57,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  changePassword: async (data: { currentPassword: string, newPassword: string }) => {
+    const res = await fetch(`${API_URL}/auth/change_password.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
   // --- DASHBOARD ---
   getDashboardStats: async () => {
     const res = await fetch(`${API_URL}/dashboard.php`, { headers: getHeaders() });
@@ -161,6 +170,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  addContractor: async (data: { name: string, trade: string, phone: string }) => {
+    const res = await fetch(`${API_URL}/maintenance.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ ...data, action: 'add_contractor' }),
+    });
+    return handleResponse(res);
+  },
+
   // --- RENT & RECEIPTS ---
   getRentRecords: async () => {
     const res = await fetch(`${API_URL}/rent.php`, { headers: getHeaders() });
@@ -206,7 +224,6 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     
-    
     const cloudName = 'mvy6f66e'; 
     const uploadPreset = 'jumpproptech_preset'; 
 
@@ -219,7 +236,7 @@ export const api = {
     
     if (!res.ok) throw new Error('Failed to upload image to Cloudinary');
     const data = await res.json();
-    return data.secure_url; // Returns the clean HTTPS image URL
+    return data.secure_url; 
   },
 
   // --- LOCAL STORAGE ---
