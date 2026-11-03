@@ -55,7 +55,7 @@ export default function Dashboard() {
         <p className="text-gray-400 text-sm">Here is what is happening with your properties today.</p>
       </div>
       
-      {/* Stats Grid with 3D Tilt Cards */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <TiltCard>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Properties</p>
@@ -78,7 +78,7 @@ export default function Dashboard() {
       {/* Analytics Chart */}
       {stats?.chart_data && <BarChart data={stats.chart_data} />}
 
-      {/* Financials with 3D Tilt Cards */}
+      {/* Financials */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <TiltCard className="relative overflow-hidden bg-gradient-to-br from-white to-ivory">
           <div className="absolute top-0 right-0 w-32 h-32 bg-success opacity-5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
