@@ -65,6 +65,7 @@ export const api = {
     });
     return handleResponse(res);
   },
+  
 
   // --- DASHBOARD ---
   getDashboardStats: async () => {
@@ -212,6 +213,18 @@ export const api = {
 
   sendMessage: async (data: { receiver_id: number, tenant_id: number, message: string }) => {
     const res = await fetch(`${API_URL}/messages.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+    getExpenses: async () => {
+    const res = await fetch(`${API_URL}/expenses.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  addExpense: async (data: any) => {
+    const res = await fetch(`${API_URL}/expenses.php`, { 
       method: 'POST', 
       headers: getHeaders(), 
       body: JSON.stringify(data) 
