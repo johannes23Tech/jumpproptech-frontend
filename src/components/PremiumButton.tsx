@@ -10,7 +10,7 @@ export default function PremiumButton({ children, icon, fullWidth, className = '
   return (
     <button
       {...props}
-      className={`btn-shimmer text-black font-bold uppercase tracking-wider text-sm py-3 px-6 rounded-xl flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:pointer-events-none ${
+      className={`btn-shimmer text-black font-bold uppercase tracking-wider text-xs md:text-sm py-3 px-6 rounded-xl flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:pointer-events-none ${
         fullWidth ? 'w-full' : ''
       } ${className}`}
     >
