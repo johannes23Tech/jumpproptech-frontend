@@ -10,7 +10,8 @@ body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden; /* CRITICAL: Prevents the whole page from zooming out on mobile */
+  /* CRITICAL FIX: This stops the mobile page from zooming out when the A4 receipt opens */
+  overflow-x: hidden; 
 }
 
 /* Premium Scrollbar */
@@ -61,35 +62,24 @@ button:active, .btn-tactile:active {
 }
 
 /* =========================================
-   LUXURY 3D & SHIMMER UTILITIES
+   LUXURY 3D & SHIMMER UTILITIES (NEW)
    ========================================= */
-
-/* 3D Perspective Container */
-.perspective-container {
-  perspective: 1000px;
-}
-
-/* The 3D Card Effect */
+.perspective-container { perspective: 1000px; }
 .luxury-card {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
   transform-style: preserve-3d;
   will-change: transform;
 }
-
-/* Hover state for desktop */
 @media (hover: hover) {
   .perspective-container:hover .luxury-card {
     transform: rotateX(4deg) rotateY(-4deg) translateZ(10px);
     box-shadow: -20px 20px 30px rgba(0,0,0,0.08), 0 0 0 1px rgba(197,160,89,0.1);
   }
 }
-
-/* Active (Press) state for mobile */
 .perspective-container:active .luxury-card {
   transform: scale(0.98) translateZ(0);
 }
 
-/* Gold Shimmer Button Effect */
 .btn-shimmer {
   position: relative;
   overflow: hidden;
@@ -98,11 +88,7 @@ button:active, .btn-tactile:active {
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(197, 160, 89, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
 }
-
-.btn-shimmer:hover {
-  background-position: right center;
-}
-
+.btn-shimmer:hover { background-position: right center; }
 .btn-shimmer::after {
   content: '';
   position: absolute;
@@ -112,14 +98,12 @@ button:active, .btn-tactile:active {
   transform: skewX(-25deg);
   animation: btn-shimmer-anim 3s infinite;
 }
-
 @keyframes btn-shimmer-anim {
   0% { left: -100%; }
   20% { left: 200%; }
   100% { left: 200%; }
 }
 
-/* Glassmorphism Modals */
 .glass-modal {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) saturate(180%);
