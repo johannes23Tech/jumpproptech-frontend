@@ -41,12 +41,9 @@ export default function TenantPayments() {
   });
 
   return (
-    // CRITICAL: max-w-full overflow-x-hidden stops the page from stretching on mobile
     <div className="space-y-6 max-w-full overflow-x-hidden animate-fade-in">
       
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-premium">
-        
-        {/* Header & Filters */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h2 className="font-display text-xl font-bold">My Statement</h2>
           
@@ -70,7 +67,6 @@ export default function TenantPayments() {
           </div>
         </div>
 
-        {/* Statement List */}
         <div className="space-y-3">
           {filteredRent.length === 0 ? (
             <p className="text-center text-gray-500 py-8">No records found for this period.</p>
@@ -108,9 +104,9 @@ export default function TenantPayments() {
       {selectedRecord && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 md:p-4 overflow-y-auto print-overlay">
           
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl relative my-4 md:my-8 print-modal-content overflow-hidden">
+          {/* Removed overflow-hidden here so the print area isn't cut off */}
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl relative my-4 md:my-8 print-modal-content">
             
-            {/* Modal Controls */}
             <div className="sticky top-0 bg-gray-100 p-3 md:p-4 border-b flex justify-between items-center rounded-t-xl z-10 print:hidden">
               <h3 className="font-bold text-sm md:text-lg">Receipt Preview</h3>
               <div className="flex gap-2">
@@ -126,7 +122,6 @@ export default function TenantPayments() {
               </div>
             </div>
 
-            {/* Printable Area - Allows horizontal scroll ONLY inside the modal */}
             <div className="p-2 md:p-8 bg-gray-200 print:bg-transparent print:p-0 overflow-x-auto">
                <div className="print-area min-w-[600px] md:min-w-0">
                   <ReceiptTemplate record={selectedRecord} landlordName={user?.full_name || 'Landlord'} />
