@@ -4,32 +4,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Standard CSS Variables */
-:root {
-  --color-black: #0A0A0A;
-  --color-charcoal: #171717;
-  --color-gold: #C5A059;
-  --color-gold-light: #D9BD83;
-  --color-ivory: #FAF7F2;
-  --color-ivory-dark: #F2ECE1;
-  --color-success: #2E7D32;
-  --color-warning: #B26A00;
-  --color-danger: #B3261E;
-}
-
 body {
-  background-color: var(--color-ivory);
-  color: var(--color-black);
+  background-color: #FAF7F2;
+  color: #0A0A0A;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
+/* Premium Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E5DDCD; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #E5DDCD; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #C5A059; }
+
+/* Tactile Buttons */
+button, .btn-tactile {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:active, .btn-tactile:active {
+  transform: scale(0.97);
+}
+
+/* Glassmorphism Utility */
+.glass {
+  background: rgba(250, 247, 242, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(229, 221, 205, 0.5);
+}
+
+/* Loading Skeletons */
+.skeleton {
+  background: linear-gradient(90deg, #F2ECE1 25%, #FAF7F2 50%, #F2ECE1 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 /* =========================================
    PRINT STYLES (For Instant PDF Download)

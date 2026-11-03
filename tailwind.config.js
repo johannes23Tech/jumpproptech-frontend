@@ -20,6 +20,19 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         display: ['Fraunces', 'serif'],
+      },
+      boxShadow: {
+        'premium': '0 10px 40px -10px rgba(0,0,0,0.08)',
+        'premium-hover': '0 20px 40px -10px rgba(0,0,0,0.12)',
+        'gold': '0 4px 14px 0 rgba(197, 160, 89, 0.39)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.4s ease-out',
+      },
+      keyframes: {
+        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        slideUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
       }
     },
   },
