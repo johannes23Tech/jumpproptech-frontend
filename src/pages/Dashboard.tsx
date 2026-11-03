@@ -5,6 +5,7 @@ import Skeleton from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import { Building2, TrendingUp, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BarChart from '../components/BarChart';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -78,6 +79,8 @@ export default function Dashboard() {
           <p className="font-display text-3xl font-bold text-black">{stats?.vacant || 0}</p>
         </div>
       </div>
+            {/* NEW CHART */}
+      {stats?.chart_data && <BarChart data={stats.chart_data} />}
 
       {/* Financials */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
