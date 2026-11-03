@@ -1,85 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body {
-  background-color: #FAF7F2;
-  color: #0A0A0A;
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Premium Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E5DDCD; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #C5A059; }
-
-/* Tactile Buttons */
-button, .btn-tactile {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-button:active, .btn-tactile:active {
-  transform: scale(0.97);
-}
-
-/* Glassmorphism Utility */
-.glass {
-  background: rgba(250, 247, 242, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(229, 221, 205, 0.5);
-}
-
-/* Loading Skeletons */
-.skeleton {
-  background: linear-gradient(90deg, #F2ECE1 25%, #FAF7F2 50%, #F2ECE1 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* =========================================
-   PRINT STYLES (For Instant PDF Download)
-   ========================================= */
-@media print {
-  @page { margin: 1cm; }
-  body { margin: 0; padding: 0; background: white !important; }
-  body * { visibility: hidden; }
-
-  .print-overlay {
-    position: static !important;
-    display: block !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
-  .print-modal-content {
-    position: static !important;
-    box-shadow: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-    max-width: 100% !important;
-  }
-
-  .print-area, .print-area * { visibility: visible; }
-
-  .print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="description" content="Jump PropTech - Smarter Property Management for the South African market." />
+    
+    <!-- Improved Google Fonts Import (Moved from CSS to HTML for faster loading) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <title>Jump PropTech | Smarter Property Management</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -4,17 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================
+   BASE STYLES & MOBILE FIX
+   ========================================= */
 body {
   background-color: #FAF7F2;
   color: #0A0A0A;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* CRITICAL FIX: This stops the mobile page from zooming out */
+  /* CRITICAL FIX: This stops the mobile page from zooming out when a wide A4 modal opens */
   overflow-x: hidden; 
 }
 
-/* Premium Scrollbar */
+/* =========================================
+   PREMIUM SCROLLBAR
+   ========================================= */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #E5DDCD; border-radius: 10px; }
@@ -24,7 +29,9 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Tactile Buttons */
+/* =========================================
+   TACTILE BUTTONS & ANIMATIONS
+   ========================================= */
 button, .btn-tactile {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -32,27 +39,6 @@ button:active, .btn-tactile:active {
   transform: scale(0.97);
 }
 
-/* Glassmorphism Utility */
-.glass {
-  background: rgba(250, 247, 242, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(229, 221, 205, 0.5);
-}
-
-/* Loading Skeletons */
-.skeleton {
-  background: linear-gradient(90deg, #F2ECE1 25%, #FAF7F2 50%, #F2ECE1 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* Slide animation for Drawers */
 @keyframes slideLeft {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
@@ -61,10 +47,21 @@ button:active, .btn-tactile:active {
   animation: slideLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #F2ECE1 25%, #FAF7F2 50%, #F2ECE1 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
 /* =========================================
    LUXURY 3D & SHIMMER UTILITIES
    ========================================= */
-
 .perspective-container {
   perspective: 1000px;
 }
@@ -115,6 +112,14 @@ button:active, .btn-tactile:active {
   100% { left: 200%; }
 }
 
+/* Glassmorphism Overlay */
+.glass {
+  background: rgba(250, 247, 242, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(229, 221, 205, 0.5);
+}
+
 .glass-modal {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) saturate(180%);
@@ -124,13 +129,27 @@ button:active, .btn-tactile:active {
 }
 
 /* =========================================
-   PRINT STYLES (For Instant PDF Download)
+   BULLETPROOF PRINT STYLES (For PDF)
    ========================================= */
 @media print {
-  @page { margin: 1cm; }
-  body { margin: 0; padding: 0; background: white !important; overflow: visible !important; }
-  body * { visibility: hidden; }
+  /* Set page margins for the A4 paper */
+  @page { 
+    margin: 1cm; 
+    size: auto;
+  }
 
+  /* Hide everything on the page by default */
+  body { 
+    margin: 0; 
+    padding: 0; 
+    background: white !important; 
+    overflow: visible !important; 
+  }
+  body * { 
+    visibility: hidden; 
+  }
+
+  /* Break the fixed modal trap */
   .print-overlay {
     position: static !important;
     display: block !important;
@@ -148,16 +167,37 @@ button:active, .btn-tactile:active {
     background: transparent !important;
     max-width: 100% !important;
     overflow: visible !important;
+    border: none !important;
   }
 
-  .print-area, .print-area * { visibility: visible; }
+  /* Make only the receipt visible */
+  .print-area, .print-area * { 
+    visibility: visible; 
+  }
 
+  /* FIX: Removed position: absolute to prevent blank pages */
   .print-area {
-    position: absolute;
+    position: relative !important;
     left: 0;
     top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
+    width: 100% !important;
+    min-width: 0 !important; /* Override the 600px mobile scroll width */
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid; /* Prevents the receipt from being cut in half */
+  }
+}
+
+/* =========================================
+   ACCESSIBILITY
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
