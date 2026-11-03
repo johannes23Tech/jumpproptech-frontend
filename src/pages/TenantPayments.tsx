@@ -9,12 +9,15 @@ export default function TenantPayments() {
   const [data, setData] = useState<any>(null);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [emailStatus, setEmailStatus] = useState('');
+  
+  // Filtering State (Default to 6 months)
   const [filterMonths, setFilterMonths] = useState(6); 
 
   useEffect(() => {
     api.getTenantData().then(res => setData(res)).catch(console.error);
   }, []);
 
+  // Native Print Function - Triggers the browser's print dialog instantly
   const handleDownloadPDF = () => {
     window.print();
   };
@@ -32,8 +35,9 @@ export default function TenantPayments() {
 
   if (!data) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
+  // Filter the rent records based on the selected period
   const filteredRent = data.rent.filter((r: any) => {
-    if (filterMonths === 0) return true;
+    if (filterMonths === 0) return true; // 'All time'
     const recordDate = new Date(r.month_for);
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - filterMonths);
@@ -41,7 +45,7 @@ export default function TenantPayments() {
   });
 
   return (
-    // ADDED max-w-full overflow-x-hidden TO FIX MOBILE SCREEN SIZE ISSUE
+    // CRITICAL: overflow-x-hidden prevents the whole page from zooming out on mobile
     <div className="space-y-6 max-w-full overflow-x-hidden animate-fade-in">
       
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-premium">
@@ -87,7 +91,7 @@ export default function TenantPayments() {
                     <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-1 rounded-full ${r.status === 'Paid' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
                       {r.status}
                     </span>
-                    {r.status === 'Paid' && <p className="text-xs text-gray-500 mt-1">Via {r.payment_method}</p>}
+                    {r.status === 'Paid' && <p className="text-xs text-gray-500 mt-1">Paid via {r.payment_method}</p>}
                   </div>
                   {r.status === 'Paid' && (
                     <button 
@@ -106,13 +110,15 @@ export default function TenantPayments() {
 
       {/* Receipt Modal */}
       {selectedRecord && (
+        // print-overlay helps hide everything else when generating the PDF
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 md:p-4 overflow-y-auto print-overlay">
           
+          {/* print-modal-content strips away the modal styling for the PDF */}
           <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl relative my-4 md:my-8 print-modal-content overflow-hidden">
             
-            {/* Modal Controls */}
-            <div className="sticky top-0 bg-gray-100 p-4 border-b flex justify-between items-center rounded-t-xl z-10 print:hidden">
-              <h3 className="font-bold text-lg">Receipt Preview</h3>
+            {/* Modal Controls (Hidden when printing) */}
+            <div className="sticky top-0 bg-gray-100 p-3 md:p-4 border-b flex justify-between items-center rounded-t-xl z-10 print:hidden">
+              <h3 className="font-bold text-sm md:text-lg">Receipt Preview</h3>
               <div className="flex gap-2">
                 <button onClick={handleDownloadPDF} className="bg-gold text-black px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-xs hover:opacity-90">
                   <Download size={14} /> Save PDF
@@ -126,8 +132,9 @@ export default function TenantPayments() {
               </div>
             </div>
 
-            {/* Printable Area - Added overflow-x-auto to handle A4 width on mobile */}
+            {/* Printable Area - overflow-x-auto allows horizontal scrolling on mobile */}
             <div className="p-2 md:p-8 bg-gray-200 print:bg-transparent print:p-0 overflow-x-auto">
+               {/* min-w-[600px] forces the A4 width, enabling the scroll */}
                <div className="print-area min-w-[600px] md:min-w-0">
                   <ReceiptTemplate record={selectedRecord} landlordName={user?.full_name || 'Landlord'} />
                </div>
