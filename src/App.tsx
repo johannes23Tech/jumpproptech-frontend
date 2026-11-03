@@ -10,6 +10,7 @@ import Units from './pages/Units';
 import Tenants from './pages/Tenants';
 import Rent from './pages/Rent';
 import Layout from './components/Layout';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 // Tenant Imports
 import TenantDashboard from './pages/TenantDashboard';
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/admin" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
       
       <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
       

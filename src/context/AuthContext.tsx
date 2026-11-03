@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '../utils/api';
 
+// Added 'superadmin' to the role options
 export type User = {
   id: number;
   full_name: string;
   email: string;
-  role: 'landlord' | 'agent' | 'tenant' | 'maintenance';
+  role: 'landlord' | 'agent' | 'tenant' | 'maintenance' | 'superadmin';
 };
 
 type AuthContextType = {
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if user is already logged in on page refresh
     const savedUser = api.getUser();
     if (savedUser) setUser(savedUser);
     setLoading(false);

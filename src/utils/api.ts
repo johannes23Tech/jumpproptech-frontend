@@ -231,6 +231,10 @@ export const api = {
     });
     return handleResponse(res);
   },
+    getSuperAdminStats: async () => {
+    const res = await fetch(`${API_URL}/admin/stats.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
 
   // --- CLOUDINARY IMAGE UPLOAD ---
   uploadImage: async (file: File) => {

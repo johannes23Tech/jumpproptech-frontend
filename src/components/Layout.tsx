@@ -1,7 +1,11 @@
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Building2, Key, Users, Wallet, LogOut, FileText, MessageSquare, Wrench, CreditCard, UserCircle, Download } from 'lucide-react';
+import { 
+  LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
+  FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
+  Download, ShieldAlert 
+} from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
 
@@ -19,6 +23,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const isTenant = user?.role === 'tenant';
 
+  // Base Owner Navigation
   const ownerNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Properties', path: '/properties', icon: Building2 },
@@ -28,6 +33,11 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
   ];
+
+  // Add Admin Portal link if the user is a superadmin
+  if (user?.role === 'superadmin') {
+    ownerNav.push({ name: 'Admin Portal', path: '/admin', icon: ShieldAlert });
+  }
 
   const tenantNav = [
     { name: 'Home', path: '/', icon: LayoutDashboard },
@@ -47,7 +57,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="w-10 h-10 rounded-lg bg-gold flex items-center justify-center font-display font-bold text-black">JL</div>
           <div>
             <h1 className="font-display text-lg">Jump PropTech</h1>
-            <p className="text-[9px] tracking-widest text-gold uppercase">{isTenant ? 'Tenant Portal' : 'Landlord Portal'}</p>
+            <p className="text-[9px] tracking-widest text-gold uppercase">
+              {isTenant ? 'Tenant Portal' : user?.role === 'superadmin' ? 'System Admin' : 'Landlord Portal'}
+            </p>
           </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
