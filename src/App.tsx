@@ -11,6 +11,8 @@ import Units from './pages/Units';
 import Tenants from './pages/Tenants';
 import Rent from './pages/Rent';
 import Layout from './components/Layout';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 
 // Tenant Imports
 import TenantDashboard from './pages/TenantDashboard';
@@ -48,6 +50,8 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/paywall" element={<Paywall />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       
       <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
       

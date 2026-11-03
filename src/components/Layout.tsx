@@ -23,7 +23,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const isTenant = user?.role === 'tenant';
 
-  // Base Owner Navigation
+  // Landlord Navigation (The first 5 will show on mobile)
   const ownerNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Properties', path: '/properties', icon: Building2 },
@@ -39,15 +39,24 @@ export default function Layout({ children }: { children: ReactNode }) {
     ownerNav.push({ name: 'Admin Portal', path: '/admin', icon: ShieldAlert });
   }
 
+  // Tenant Navigation (Exactly 5 for the mobile bottom bar)
   const tenantNav = [
     { name: 'Home', path: '/', icon: LayoutDashboard },
-    { name: 'Lease & Docs', path: '/documents', icon: FileText },
     { name: 'Payments', path: '/payments', icon: CreditCard },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
+    { name: 'Profile', path: '/profile', icon: UserCircle },
   ];
 
-  const navItems = isTenant ? tenantNav : ownerNav;
+  // For Desktop, we add the extra Tenant pages that don't fit in the bottom bar
+  const desktopTenantNav = [
+    ...tenantNav.slice(0, 4), // Home, Payments, Maintenance, Messages
+    { name: 'Lease & Docs', path: '/documents', icon: FileText },
+    ...tenantNav.slice(4) // Profile
+  ];
+
+  const navItems = isTenant ? desktopTenantNav : ownerNav;
+  const mobileNavItems = isTenant ? tenantNav : ownerNav.slice(0, 5);
 
   return (
     <div className="flex min-h-screen bg-ivory">
@@ -87,7 +96,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main className="flex-1 md:ml-64 pb-20 md:pb-8 flex flex-col">
         <header className="sticky top-0 z-30 bg-ivory/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 md:px-8 md:py-4 flex justify-between items-center">
           <h1 className="font-display text-xl md:text-2xl capitalize text-black">
-            {location.pathname === '/' ? (isTenant ? 'Tenant Dashboard' : 'Dashboard') : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
+            {location.pathname === '/' ? (isTenant ? 'Dashboard' : 'Dashboard') : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
           </h1>
           
           {/* Avatar Dropdown Menu */}
@@ -154,10 +163,10 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-black border-t border-gray-800 z-40">
+      {/* Mobile Bottom Nav (Exactly 5 items) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-black border-t border-gray-800 z-40 pb-safe">
         <div className="flex justify-around items-center h-16">
-          {navItems.slice(0, 5).map((item) => {
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.path === '/' 
               ? location.pathname === '/' 

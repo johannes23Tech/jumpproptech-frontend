@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, FileText } from 'lucide-react';
 
 export default function Tenants() {
   const navigate = useNavigate();
@@ -53,9 +53,33 @@ export default function Tenants() {
         deposit: deposit ? Number(deposit) : 0, monthly_rent: rent
       });
       setIsModalOpen(false);
+      // Reset form
+      setName(''); setPhone(''); setEmail(''); setPassword(''); setLeaseStart(''); setLeaseEnd('');
       fetchData();
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const handleDownloadLease = async (tenantId: number, tenantName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`https://jumpproptech-api.onrender.com/api/generate_lease.php?tenant_id=${tenantId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) throw new Error("Failed to generate lease");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Lease_${tenantName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      alert("Error downloading lease agreement. Please ensure the PDF library is installed on the server.");
     }
   };
 
@@ -63,16 +87,16 @@ export default function Tenants() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display text-2xl font-bold">Tenants</h2>
-        <button onClick={() => setIsModalOpen(true)} disabled={vacantUnits.length === 0} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 disabled:opacity-50">
+        <button onClick={() => setIsModalOpen(true)} disabled={vacantUnits.length === 0} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 disabled:opacity-50 transition-opacity">
           <Plus size={18} /> Add Tenant
         </button>
       </div>
 
-      {vacantUnits.length === 0 && <div className="bg-warning/10 text-warning p-4 rounded-lg mb-6">You need a Vacant Unit to add a Tenant.</div>}
+      {vacantUnits.length === 0 && <div className="bg-warning/10 text-warning p-4 rounded-lg mb-6 border border-warning/20">You need a Vacant Unit to add a Tenant.</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {tenants.map((t) => (
-          <div key={t.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div key={t.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-premium transition-shadow duration-300 flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
                 <div>
@@ -89,26 +113,35 @@ export default function Tenants() {
               </div>
             </div>
             
-            {/* Message Button */}
-            <button 
-              onClick={() => navigate(`/messages/${t.id}`)}
-              className="mt-4 w-full bg-charcoal text-ivory py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-black transition-colors"
-            >
-              <MessageSquare size={16} /> Message Tenant
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-6">
+              <button 
+                onClick={() => handleDownloadLease(t.id, t.name)}
+                className="flex-1 bg-white border border-gray-300 text-black py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors text-xs"
+              >
+                <FileText size={14} /> Lease PDF
+              </button>
+              <button 
+                onClick={() => navigate(`/messages/${t.id}`)}
+                className="flex-1 bg-charcoal text-ivory py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-black transition-colors text-xs"
+              >
+                <MessageSquare size={14} /> Message
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* Add Tenant Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-ivory w-full max-w-md rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h3 className="font-display text-xl font-bold mb-4">Add Tenant</h3>
+            <h3 className="font-display text-xl font-bold mb-4">Onboard New Tenant</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign Unit</label>
                 <select value={unitId} onChange={(e) => handleUnitSelect(e.target.value)} required className="w-full border p-3 rounded-lg bg-white">
-                  {vacantUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number}</option>)}
+                  {vacantUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number} (R {u.monthly_rent})</option>)}
                 </select>
               </div>
               
@@ -157,8 +190,8 @@ export default function Tenants() {
               </div>
 
               <div className="flex gap-2 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg">Save Tenant</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg hover:opacity-90 transition-opacity">Save Tenant</button>
               </div>
             </form>
           </div>
