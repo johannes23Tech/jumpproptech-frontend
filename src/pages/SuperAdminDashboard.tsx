@@ -1,17 +1,31 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { ShieldCheck, Building2, Key, Users, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Building2, Key, Users, TrendingUp, Ban, CheckCircle } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchStats = () => {
     api.getSuperAdminStats()
       .then(data => setStats(data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStats();
   }, []);
+
+  const handleToggle = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'expired' ? 'active' : 'expired';
+    try {
+      await api.toggleSubscription({ landlord_id: id, status: newStatus });
+      fetchStats(); // Refresh the list
+    } catch (err) {
+      alert("Failed to update subscription");
+    }
+  };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading global metrics...</div>;
   if (!stats) return <div className="p-8 text-center text-danger">Access Denied or Error Loading Stats.</div>;
@@ -48,15 +62,29 @@ export default function SuperAdminDashboard() {
       </div>
 
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <h3 className="font-display text-xl font-bold mb-4">Recent Landlord Signups</h3>
+        <h3 className="font-display text-xl font-bold mb-4">Landlord Accounts & Subscriptions</h3>
         <div className="space-y-3">
           {stats.recent_signups.map((user: any, i: number) => (
-            <div key={i} className="flex justify-between items-center p-3 bg-ivory rounded-lg border border-gray-100">
+            <div key={i} className="flex flex-col md:flex-row justify-between md:items-center p-4 bg-ivory rounded-lg border border-gray-100 gap-4">
               <div>
                 <p className="font-bold text-black">{user.full_name}</p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
-              <span className="text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString()}</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${user.subscription_status === 'expired' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
+                  {user.subscription_status || 'active'}
+                </span>
+                <button 
+                  onClick={() => handleToggle(user.id, user.subscription_status || 'active')}
+                  className={`text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1 transition-colors ${
+                    user.subscription_status === 'expired' 
+                      ? 'bg-success text-white hover:bg-success/80' 
+                      : 'bg-danger/10 text-danger hover:bg-danger/20'
+                  }`}
+                >
+                  {user.subscription_status === 'expired' ? <><CheckCircle size={14}/> Activate</> : <><Ban size={14}/> Suspend</>}
+                </button>
+              </div>
             </div>
           ))}
           {stats.recent_signups.length === 0 && <p className="text-gray-500">No signups yet.</p>}

@@ -4,13 +4,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Paywall from './pages/Paywall';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Units from './pages/Units';
 import Tenants from './pages/Tenants';
 import Rent from './pages/Rent';
 import Layout from './components/Layout';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 // Tenant Imports
 import TenantDashboard from './pages/TenantDashboard';
@@ -19,9 +19,10 @@ import TenantPayments from './pages/TenantPayments';
 import TenantMaintenance from './pages/TenantMaintenance';
 import TenantProfile from './pages/TenantProfile';
 
-// Shared Maintenance & Messaging
+// Landlord/Shared Imports
 import LandlordMaintenance from './pages/LandlordMaintenance';
-import LandlordProfile from './pages/LandlordProfile'; // IMPORTED
+import LandlordProfile from './pages/LandlordProfile';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Messages from './pages/Messages';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -46,7 +47,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/admin" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
+      <Route path="/paywall" element={<Paywall />} />
       
       <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
       
@@ -65,12 +66,13 @@ function AppRoutes() {
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
       <Route path="/messages/:tenantId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
-      {/* Landlord Only Routes */}
+      {/* Landlord/Admin Only Routes */}
       <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
       <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
       <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
       <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
       <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><OwnerRoute><SuperAdminDashboard /></OwnerRoute></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

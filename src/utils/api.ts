@@ -12,6 +12,13 @@ const handleResponse = async (res: Response) => {
   const text = await res.text();
   try {
     const data = JSON.parse(text);
+    
+    // GLOBAL PAYWALL INTERCEPTOR
+    if (res.status === 402) {
+      window.location.href = '/paywall';
+      throw new Error(data.message || 'Subscription expired');
+    }
+
     if (!res.ok) throw new Error(data.message || 'Server error');
     return data;
   } catch (err) {
@@ -65,9 +72,23 @@ export const api = {
     });
     return handleResponse(res);
   },
-  
 
-  // --- DASHBOARD ---
+  // --- SUPER ADMIN ---
+  getSuperAdminStats: async () => {
+    const res = await fetch(`${API_URL}/admin/stats.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  toggleSubscription: async (data: { landlord_id: number, status: string }) => {
+    const res = await fetch(`${API_URL}/admin/toggle_sub.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+
+  // --- DASHBOARD & ANALYTICS ---
   getDashboardStats: async () => {
     const res = await fetch(`${API_URL}/dashboard.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -138,7 +159,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- MAINTENANCE ---
+  // --- MAINTENANCE & FINANCE ---
   getMaintenanceData: async () => {
     const res = await fetch(`${API_URL}/maintenance.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -176,6 +197,20 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ ...data, action: 'add_contractor' }),
+    });
+    return handleResponse(res);
+  },
+
+  getExpenses: async () => {
+    const res = await fetch(`${API_URL}/expenses.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  addExpense: async (data: any) => {
+    const res = await fetch(`${API_URL}/expenses.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
     });
     return handleResponse(res);
   },
@@ -219,30 +254,14 @@ export const api = {
     });
     return handleResponse(res);
   },
-    getExpenses: async () => {
-    const res = await fetch(`${API_URL}/expenses.php`, { headers: getHeaders() });
-    return handleResponse(res);
-  },
-  addExpense: async (data: any) => {
-    const res = await fetch(`${API_URL}/expenses.php`, { 
-      method: 'POST', 
-      headers: getHeaders(), 
-      body: JSON.stringify(data) 
-    });
-    return handleResponse(res);
-  },
-    getSuperAdminStats: async () => {
-    const res = await fetch(`${API_URL}/admin/stats.php`, { headers: getHeaders() });
-    return handleResponse(res);
-  },
 
   // --- CLOUDINARY IMAGE UPLOAD ---
   uploadImage: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const cloudName = 'mvy6f66e'; 
-    const uploadPreset = 'jumpproptech_preset'; 
+    const cloudName = 'YOUR_CLOUD_NAME'; 
+    const uploadPreset = 'YOUR_PRESET_NAME'; 
 
     formData.append('upload_preset', uploadPreset);
 
