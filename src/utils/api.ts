@@ -158,6 +158,14 @@ export const api = {
     });
     return handleResponse(res);
   },
+    createLandlord: async (data: { full_name: string, email: string, password: string }) => {
+    const res = await fetch(`${API_URL}/admin/create_landlord.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
 
   // --- MAINTENANCE & FINANCE ---
   getMaintenanceData: async () => {

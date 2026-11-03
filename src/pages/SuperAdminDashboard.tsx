@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { ShieldCheck, Building2, Key, Users, TrendingUp, Ban, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Building2, Key, Users, TrendingUp, Ban, CheckCircle, Plus } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Form State for new Landlord
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const fetchStats = () => {
     api.getSuperAdminStats()
@@ -13,17 +19,28 @@ export default function SuperAdminDashboard() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
   const handleToggle = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === 'expired' ? 'active' : 'expired';
     try {
       await api.toggleSubscription({ landlord_id: id, status: newStatus });
-      fetchStats(); // Refresh the list
+      fetchStats();
     } catch (err) {
       alert("Failed to update subscription");
+    }
+  };
+
+  const handleCreateLandlord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createLandlord({ full_name: fullName, email, password });
+      alert('Landlord created successfully!');
+      setIsModalOpen(false);
+      setFullName(''); setEmail(''); setPassword('');
+      fetchStats();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -32,14 +49,19 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-charcoal to-black p-6 rounded-2xl border border-gold/30 shadow-2xl flex items-center gap-4">
-        <div className="bg-gold p-3 rounded-xl">
-          <ShieldCheck size={32} className="text-black" />
+      <div className="bg-gradient-to-r from-charcoal to-black p-6 rounded-2xl border border-gold/30 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="bg-gold p-3 rounded-xl">
+            <ShieldCheck size={32} className="text-black" />
+          </div>
+          <div>
+            <h1 className="font-display text-3xl font-bold text-ivory">Super Admin Portal</h1>
+            <p className="text-gold-light text-sm">Global platform overview for Jump Living.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-display text-3xl font-bold text-ivory">Super Admin Portal</h1>
-          <p className="text-gold-light text-sm">Global platform overview for Jump Living.</p>
-        </div>
+        <button onClick={() => setIsModalOpen(true)} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 text-sm">
+          <Plus size={16} /> Create Landlord
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -90,6 +112,33 @@ export default function SuperAdminDashboard() {
           {stats.recent_signups.length === 0 && <p className="text-gray-500">No signups yet.</p>}
         </div>
       </div>
+
+      {/* Create Landlord Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-ivory w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <h3 className="font-display text-xl font-bold mb-4">Create New Landlord Account</h3>
+            <form onSubmit={handleCreateLandlord} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full border p-3 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border p-3 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temporary Password</label>
+                <input type="text" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border p-3 rounded-lg" placeholder="e.g. Welcome123" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg hover:opacity-90 transition-opacity">Create Landlord</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
