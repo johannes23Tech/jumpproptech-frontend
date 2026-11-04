@@ -10,20 +10,26 @@ const getHeaders = () => {
 
 const handleResponse = async (res: Response) => {
   const text = await res.text();
+  let data;
+  
+  // 1. Try to parse the JSON
   try {
-    const data = JSON.parse(text);
-    
+    data = JSON.parse(text);
+  } catch (err) {
+    // Only throw this if it's truly not JSON (e.g., an HTML 502 Bad Gateway page)
+    throw new Error(`Backend returned invalid JSON. Status: ${res.status}. Raw: ${text.substring(0, 100)}...`);
+  }
+
+  // 2. If the response is not OK, throw the actual message from the backend
+  if (!res.ok) {
     // GLOBAL PAYWALL INTERCEPTOR
     if (res.status === 402) {
       window.location.href = '/paywall';
-      throw new Error(data.message || 'Subscription expired');
     }
-
-    if (!res.ok) throw new Error(data.message || 'Server error');
-    return data;
-  } catch (err) {
-    throw new Error(`Backend returned invalid JSON. Raw output: ${text.substring(0, 100)}...`);
+    throw new Error(data.message || data.error || data.details || 'Server error');
   }
+
+  return data;
 };
 
 export const api = {
@@ -269,8 +275,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     
-    
-    const cloudName = 'mvy6f66e'; 
+    const cloudName = 'mvy6f66e';
     const uploadPreset = 'jumpproptech_preset'; 
 
     formData.append('upload_preset', uploadPreset);
@@ -283,7 +288,7 @@ export const api = {
     if (!res.ok) throw new Error('Failed to upload image to Cloudinary');
     const data = await res.json();
     
-    // OPTIMIZATION: Auto-compress and resize the image URL
+    // Auto-compress and resize the image URL
     return data.secure_url.replace('/upload/', '/upload/q_auto,f_auto,w_1000/'); 
   },
 
