@@ -88,6 +88,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  createLandlord: async (data: { full_name: string, email: string, password: string }) => {
+    const res = await fetch(`${API_URL}/admin/create_landlord.php`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+
   // --- DASHBOARD & ANALYTICS ---
   getDashboardStats: async () => {
     const res = await fetch(`${API_URL}/dashboard.php`, { headers: getHeaders() });
@@ -139,7 +148,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- TENANT DATA ---
+  // --- TENANT DATA (Tenant Side) ---
   getTenantData: async () => {
     const res = await fetch(`${API_URL}/tenant_data.php`, { headers: getHeaders() });
     return handleResponse(res);
@@ -152,14 +161,6 @@ export const api = {
 
   updateTenantProfile: async (data: any) => {
     const res = await fetch(`${API_URL}/tenant_profile.php`, { 
-      method: 'POST', 
-      headers: getHeaders(), 
-      body: JSON.stringify(data) 
-    });
-    return handleResponse(res);
-  },
-    createLandlord: async (data: { full_name: string, email: string, password: string }) => {
-    const res = await fetch(`${API_URL}/admin/create_landlord.php`, { 
       method: 'POST', 
       headers: getHeaders(), 
       body: JSON.stringify(data) 
@@ -263,13 +264,14 @@ export const api = {
     return handleResponse(res);
   },
 
-  // --- CLOUDINARY IMAGE UPLOAD ---
+  // --- CLOUDINARY IMAGE UPLOAD (Optimized) ---
   uploadImage: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const cloudName = 'YOUR_CLOUD_NAME'; 
-    const uploadPreset = 'YOUR_PRESET_NAME'; 
+    
+    const cloudName = 'mvy6f66e'; 
+    const uploadPreset = 'jumpproptech_preset'; 
 
     formData.append('upload_preset', uploadPreset);
 
@@ -280,7 +282,9 @@ export const api = {
     
     if (!res.ok) throw new Error('Failed to upload image to Cloudinary');
     const data = await res.json();
-    return data.secure_url; 
+    
+    // OPTIMIZATION: Auto-compress and resize the image URL
+    return data.secure_url.replace('/upload/', '/upload/q_auto,f_auto,w_1000/'); 
   },
 
   // --- LOCAL STORAGE ---

@@ -1,31 +1,30 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Instantly load critical UI
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Paywall from './pages/Paywall';
-import Dashboard from './pages/Dashboard';
-import Properties from './pages/Properties';
-import Units from './pages/Units';
-import Tenants from './pages/Tenants';
-import Rent from './pages/Rent';
 import Layout from './components/Layout';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
+import Skeleton from './components/Skeleton';
 
-// Tenant Imports
-import TenantDashboard from './pages/TenantDashboard';
-import TenantDocuments from './pages/TenantDocuments';
-import TenantPayments from './pages/TenantPayments';
-import TenantMaintenance from './pages/TenantMaintenance';
-import TenantProfile from './pages/TenantProfile';
-
-// Landlord/Shared Imports
-import LandlordMaintenance from './pages/LandlordMaintenance';
-import LandlordProfile from './pages/LandlordProfile';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import Messages from './pages/Messages';
+// LAZY LOAD PAGES (Code Splitting)
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Properties = lazy(() => import('./pages/Properties'));
+const Units = lazy(() => import('./pages/Units'));
+const Tenants = lazy(() => import('./pages/Tenants'));
+const Rent = lazy(() => import('./pages/Rent'));
+const TenantDashboard = lazy(() => import('./pages/TenantDashboard'));
+const TenantDocuments = lazy(() => import('./pages/TenantDocuments'));
+const TenantPayments = lazy(() => import('./pages/TenantPayments'));
+const TenantMaintenance = lazy(() => import('./pages/TenantMaintenance'));
+const TenantProfile = lazy(() => import('./pages/TenantProfile'));
+const LandlordMaintenance = lazy(() => import('./pages/LandlordMaintenance'));
+const LandlordProfile = lazy(() => import('./pages/LandlordProfile'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const Messages = lazy(() => import('./pages/Messages'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -45,41 +44,42 @@ function AppRoutes() {
   const isTenant = user?.role === 'tenant';
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/paywall" element={<Paywall />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/privacy" element={<Privacy />} />
-      
-      <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
-      
-      {/* Tenant Only Routes */}
-      <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
-      <Route path="/payments" element={<ProtectedRoute><TenantPayments /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><TenantProfile /></ProtectedRoute>} />
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-gold animate-pulse"></div>
+      </div>
+    }>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/paywall" element={<Paywall />} />
+        
+        <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
+        
+        <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
+        <Route path="/payments" element={<ProtectedRoute><TenantPayments /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><TenantProfile /></ProtectedRoute>} />
 
-      {/* Shared Routes */}
-      <Route path="/maintenance" element={
-        <ProtectedRoute>
-          {isTenant ? <TenantMaintenance /> : <OwnerRoute><LandlordMaintenance /></OwnerRoute>}
-        </ProtectedRoute>
-      } />
+        <Route path="/maintenance" element={
+          <ProtectedRoute>
+            {isTenant ? <TenantMaintenance /> : <OwnerRoute><LandlordMaintenance /></OwnerRoute>}
+          </ProtectedRoute>
+        } />
 
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/messages/:tenantId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/messages/:tenantId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
-      {/* Landlord/Admin Only Routes */}
-      <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
-      <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
-      <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
-      <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
-      <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute><OwnerRoute><SuperAdminDashboard /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><OwnerRoute><SuperAdminDashboard /></OwnerRoute></ProtectedRoute>} />
 
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Suspense>
   );
 }
 
