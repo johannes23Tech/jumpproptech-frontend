@@ -5,6 +5,8 @@ import {
   Plus, MessageSquare, FileText, X, User, ShieldAlert, 
   Car, Phone, Mail, Users, Calendar, DollarSign 
 } from 'lucide-react';
+import Modal from '../components/Modal';
+import PremiumButton from '../components/PremiumButton';
 
 export default function Tenants() {
   const navigate = useNavigate();
@@ -84,15 +86,19 @@ export default function Tenants() {
   };
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display text-2xl font-bold">Tenants</h2>
-        <button onClick={() => setIsModalOpen(true)} disabled={vacantUnits.length === 0} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 disabled:opacity-50 transition-opacity">
-          <Plus size={18} /> Add Tenant
-        </button>
+        <PremiumButton onClick={() => setIsModalOpen(true)} disabled={vacantUnits.length === 0} icon={<Plus size={18} />}>
+          Add Tenant
+        </PremiumButton>
       </div>
 
-      {vacantUnits.length === 0 && <div className="bg-warning/10 text-warning p-4 rounded-lg mb-6 border border-warning/20">You need a Vacant Unit to add a Tenant.</div>}
+      {vacantUnits.length === 0 && (
+        <div className="bg-warning/10 text-warning p-4 rounded-lg mb-6 border border-warning/20">
+          You need a Vacant Unit to add a Tenant.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {tenants.map((t) => (
@@ -130,14 +136,12 @@ export default function Tenants() {
         ))}
       </div>
 
-      {/* TENANT DETAILS DRAWER */}
+      {/* TENANT DETAILS DRAWER (Remains unchanged) */}
       {selectedTenant && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
-          {/* Click-away overlay */}
           <div className="absolute inset-0" onClick={() => setSelectedTenant(null)} />
           
           <div className="bg-ivory w-full max-w-md h-full shadow-2xl relative animate-slide-left overflow-y-auto">
-            {/* Drawer Header */}
             <div className="sticky top-0 bg-charcoal text-ivory p-6 flex justify-between items-center z-10">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-gold text-black flex items-center justify-center font-bold text-xl">
@@ -155,7 +159,6 @@ export default function Tenants() {
 
             <div className="p-6 space-y-6">
               
-              {/* SECTION: Personal Info */}
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Personal Information</h4>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -178,7 +181,6 @@ export default function Tenants() {
                 </div>
               </div>
 
-              {/* SECTION: Contact & Emergency */}
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Contact Details</h4>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -197,7 +199,6 @@ export default function Tenants() {
                 </div>
               </div>
 
-              {/* SECTION: Next of Kin */}
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Next of Kin</h4>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -220,7 +221,6 @@ export default function Tenants() {
                 </div>
               </div>
 
-              {/* SECTION: Vehicle */}
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Vehicle</h4>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -237,7 +237,6 @@ export default function Tenants() {
                 </div>
               </div>
 
-              {/* SECTION: Lease */}
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Lease Details</h4>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -261,55 +260,71 @@ export default function Tenants() {
         </div>
       )}
 
-      {/* Add Tenant Modal (Same as before) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-ivory w-full max-w-md rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h3 className="font-display text-xl font-bold mb-4">Onboard New Tenant</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign Unit</label>
-                <select value={unitId} onChange={(e) => handleUnitSelect(e.target.value)} required className="w-full border p-3 rounded-lg bg-white">
-                  {vacantUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number} (R {u.monthly_rent})</option>)}
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 bg-gray-100 p-3 rounded-lg">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Rent (Auto)</label>
-                  <p className="font-bold text-lg">R {rent}</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Deposit (20%)</label>
-                  <input type="number" placeholder="Optional" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="w-full border p-2 rounded-lg" />
-                </div>
-              </div>
-
-              <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label><input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full border p-3 rounded-lg" /></div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone</label><input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border p-3 rounded-lg" /></div>
-                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email (Login)</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border p-3 rounded-lg" /></div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Create Password for Tenant</label>
-                <input type="text" required placeholder="e.g. Thato123" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border p-3 rounded-lg bg-gold/10 border-gold" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Lease Start</label><input type="date" required value={leaseStart} onChange={(e) => setLeaseStart(e.target.value)} className="w-full border p-3 rounded-lg" /></div>
-                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Lease End</label><input type="date" required value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} className="w-full border p-3 rounded-lg" /></div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg hover:opacity-90 transition-opacity">Save Tenant</button>
-              </div>
-            </form>
+      {/* Add Tenant Modal (NEW PREMIUM DESIGN) */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title="Onboard Tenant"
+        subtitle="Assign a tenant to a vacant unit"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Assign Unit</label>
+            <select required value={unitId} onChange={(e) => handleUnitSelect(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none text-gray-600">
+              {vacantUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number} (R {u.monthly_rent})</option>)}
+            </select>
           </div>
-        </div>
-      )}
+          
+          <div className="bg-gold/5 p-4 rounded-xl border border-gold/20 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold mb-1">Auto Rent</p>
+              <p className="font-bold text-lg text-black">R {rent}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase font-bold mb-1">Deposit (20%)</p>
+              <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="w-24 border-b border-gray-300 bg-transparent font-bold text-lg text-black focus:outline-none focus:border-gold text-right" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Phone</label>
+              <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Email (Login)</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Temporary Password</label>
+            <input type="text" required placeholder="e.g. Welcome123" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            <p className="text-[10px] text-gray-500 mt-1">Provide this to the tenant so they can log in.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Lease Start</label>
+              <input type="date" required value={leaseStart} onChange={(e) => setLeaseStart(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Lease End</label>
+              <input type="date" required value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-4 border-t border-gray-200 mt-6">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+            <PremiumButton type="submit" fullWidth className="flex-1">Save Tenant</PremiumButton>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
