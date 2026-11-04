@@ -10,13 +10,17 @@ export default function TenantDashboard() {
 
   useEffect(() => {
     api.getTenantData().then(res => {
-      setData(res);
-      // Check if this is a brand new user
+      // SAFETY CHECK: Ensure the response has the expected structure
+      if (res) {
+        setData(res);
+      }
       const isNew = localStorage.getItem('just_registered');
       if (isNew === 'true') {
         setShowPrompt(true);
       }
-    }).catch(console.error);
+    }).catch(err => {
+      console.error("Dashboard error:", err);
+    });
   }, []);
 
   const handleDismissPrompt = () => {
@@ -32,6 +36,8 @@ export default function TenantDashboard() {
 
   if (!data) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
+  // SAFETY CHECK: Ensure tenant object exists
+  const tenant = data.tenant || {};
   const pendingRent = data.rent?.find((r: any) => r.status !== 'Paid');
   const openMaint = data.maintenance?.filter((m: any) => m.status !== 'Resolved').length || 0;
 
@@ -72,8 +78,8 @@ export default function TenantDashboard() {
       <div className="bg-gradient-to-br from-charcoal to-black p-6 rounded-2xl border border-gray-800 relative overflow-hidden text-ivory shadow-lg">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gold opacity-10 rounded-full -mr-10 -mt-10"></div>
         <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">My Home</p>
-        <p className="font-display text-3xl font-semibold text-gold-light mb-2">{data.tenant?.property_name || 'Pending Assignment'}</p>
-        <p className="text-sm text-gray-300">Unit: <span className="font-bold text-white">{data.tenant?.unit_number || 'N/A'}</span> | Rent: <span className="font-bold text-white">R {data.tenant?.monthly_rent || 0}</span></p>
+        <p className="font-display text-3xl font-semibold text-gold-light mb-2">{tenant.property_name || 'Pending Assignment'}</p>
+        <p className="text-sm text-gray-300">Unit: <span className="font-bold text-white">{tenant.unit_number || 'N/A'}</span> | Rent: <span className="font-bold text-white">R {tenant.monthly_rent || 0}</span></p>
       </div>
 
       {pendingRent && (

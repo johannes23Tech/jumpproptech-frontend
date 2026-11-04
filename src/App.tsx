@@ -1,6 +1,7 @@
 import { type ReactNode, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Instantly load critical UI
 import Login from './pages/Login';
@@ -8,7 +9,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Paywall from './pages/Paywall';
 import Layout from './components/Layout';
-import Skeleton from './components/Skeleton';
 
 // LAZY LOAD PAGES (Code Splitting)
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -55,6 +55,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/paywall" element={<Paywall />} />
         
+        {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
         <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
         
         <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
@@ -87,7 +88,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ErrorBoundary>
+          <AppRoutes />
+        </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );
