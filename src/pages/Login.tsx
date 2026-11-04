@@ -6,37 +6,28 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
-  
-  // Form State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // UI State
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-  
-  // Validation State
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [globalError, setGlobalError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, loginWithData } = useAuth();
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     
     if (isRegistering) {
       if (!fullName.trim()) newErrors.fullName = "Full name is required.";
-      
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) newErrors.email = "Please enter a valid email address.";
-      
       if (password.length < 6) newErrors.password = "Password must be at least 6 characters.";
       if (password !== confirmPassword) newErrors.confirmPassword = "Passwords do not match.";
-      
       if (!agreeTerms) newErrors.agreeTerms = "You must agree to the legal terms to proceed.";
     } else {
       if (!email) newErrors.email = "Email is required.";
@@ -57,12 +48,12 @@ export default function Login() {
 
     try {
       if (isRegistering) {
-        await api.register({ full_name: fullName, email, password, role: 'tenant' });
-        setIsRegistering(false);
-        setPassword('');
-        setConfirmPassword('');
-        setAgreeTerms(false);
-        alert('Account created successfully! Please log in.');
+        const res = await api.register({ full_name: fullName, email, password, role: 'tenant' });
+        
+        // Auto-login and set flag for the overlay
+        localStorage.setItem('just_registered', 'true');
+        loginWithData(res.user, res.token);
+        
       } else {
         await login(email, password);
       }
@@ -79,7 +70,6 @@ export default function Login() {
       
       <div className="w-full max-w-md bg-charcoal rounded-3xl p-8 border border-gray-800 shadow-2xl relative z-10 my-8">
         
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl bg-gold flex items-center justify-center font-bold text-black text-xl">JL</div>
           <div>
@@ -105,64 +95,34 @@ export default function Login() {
           {isRegistering && (
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Full Name</label>
-              <input 
-                type="text" 
-                value={fullName} 
-                onChange={(e) => setFullName(e.target.value)} 
-                className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors ${errors.fullName ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} 
-              />
+              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors ${errors.fullName ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} />
               {errors.fullName && <p className="text-danger text-xs mt-1">{errors.fullName}</p>}
             </div>
           )}
           
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors ${errors.email ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} 
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors ${errors.email ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} />
             {errors.email && <p className="text-danger text-xs mt-1">{errors.email}</p>}
           </div>
           
-          {/* Password with Eye Icon */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Password</label>
             <div className="relative">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors pr-12 ${errors.password ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} 
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gold transition-colors"
-              >
+              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors pr-12 ${errors.password ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gold transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             {errors.password && <p className="text-danger text-xs mt-1">{errors.password}</p>}
           </div>
 
-          {/* Confirm Password (Only when registering) */}
           {isRegistering && (
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Confirm Password</label>
               <div className="relative">
-                <input 
-                  type={showConfirmPassword ? "text" : "password"} 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                  className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors pr-12 ${errors.confirmPassword ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gold transition-colors"
-                >
+                <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-ivory focus:outline-none transition-colors pr-12 ${errors.confirmPassword ? 'border-danger' : 'border-gray-700 focus:border-gold'}`} />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gold transition-colors">
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
@@ -172,22 +132,14 @@ export default function Login() {
           
           {!isRegistering && (
             <div className="flex justify-end pt-1">
-              <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-gold transition-colors">
-                Forgot Password?
-              </Link>
+              <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-gold transition-colors">Forgot Password?</Link>
             </div>
           )}
 
-          {/* Premium Legal Checkbox */}
           {isRegistering && (
             <div className="mt-4 p-3 bg-gray-900/50 rounded-lg border border-gray-800">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agreeTerms} 
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-gold bg-gray-900 border-gray-700 rounded focus:ring-gold focus:ring-2 shrink-0 cursor-pointer"
-                />
+                <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} className="mt-1 w-4 h-4 text-gold bg-gray-900 border-gray-700 rounded focus:ring-gold focus:ring-2 shrink-0 cursor-pointer" />
                 <span className="text-[11px] text-gray-400 leading-relaxed">
                   I agree to the <Link to="/terms" target="_blank" className="text-gold hover:underline font-semibold">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-gold hover:underline font-semibold">Privacy Policy</Link>, Fair House Rules, and authorize automatic rent disclosures as required by POPIA.
                 </span>
@@ -196,25 +148,21 @@ export default function Login() {
             </div>
           )}
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-6 hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
-            {loading ? 'Processing...' : (isRegistering ? 'Create Tenant Account' : 'Sign In')}
+          <button type="submit" disabled={loading} className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-6 hover:opacity-90 disabled:opacity-50 transition-opacity flex justify-center items-center">
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
+                Processing...
+              </span>
+            ) : (
+              isRegistering ? 'Create Tenant Account' : 'Sign In'
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-400">
           {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
-          <button 
-            onClick={() => { 
-              setIsRegistering(!isRegistering); 
-              setErrors({}); 
-              setGlobalError(''); 
-            }} 
-            className="text-gold font-semibold hover:underline"
-          >
+          <button onClick={() => { setIsRegistering(!isRegistering); setErrors({}); setGlobalError(''); }} className="text-gold font-semibold hover:underline">
             {isRegistering ? 'Sign In' : 'Register as Tenant'}
           </button>
         </div>
