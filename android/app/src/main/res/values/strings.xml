@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Jump PropTech</string>
+    <string name="title_activity_main">Jump PropTech</string>
+    <string name="package_name">com.jumpliving.proptech</string>
+    <string name="custom_url_scheme">com.jumpliving.proptech</string>
+</resources>

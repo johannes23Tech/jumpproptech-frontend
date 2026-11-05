@@ -4,24 +4,25 @@ import { Download, X } from 'lucide-react';
 export default function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-    if (isStandalone) return; // Don't show if already installed
+    // 1. Check if app is already installed (standalone mode)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      return; 
+    }
 
-    // Check for iOS
+    // 2. BLOCK iOS: If the user is on an iPhone/iPad, do nothing.
     const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    setIsIOS(isIosDevice);
+    if (isIosDevice) {
+      return;
+    }
 
-    // Show banner after 2 seconds to not annoy the user immediately
-    setTimeout(() => setShowBanner(true), 2000);
-
-    // Listen for Chrome/Android install prompt
+    // 3. Listen for the Android/Chrome/Edge install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      // Show banner only when the native install prompt is ready
+      setTimeout(() => setShowBanner(true), 2000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -29,48 +30,43 @@ export default function InstallPWA() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null);
-        setShowBanner(false);
-      }
-    } else if (isIOS) {
-      alert("To install Jump PropTech:\n\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
-    } else {
-      alert("To install Jump PropTech:\n\n1. Tap your browser menu (three dots).\n2. Select 'Install app' or 'Add to Home screen'.");
+    if (!deferredPrompt) return;
+
+    // Trigger the native Android install prompt
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowBanner(false);
     }
   };
 
-  if (!showBanner) return null;
+  // If no Android prompt is available, or on iOS, don't show anything.
+  if (!showBanner || !deferredPrompt) return null;
 
   return (
-    <>
-      {/* Mobile Banner (Shows at the top of the dashboard on phones) */}
-      <div className="md:hidden bg-charcoal text-ivory p-4 rounded-xl mb-4 flex justify-between items-center shadow-lg border border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="bg-gold p-2 rounded-lg text-black">
-            <Download size={20} />
-          </div>
-          <div>
-            <p className="font-bold text-sm">Install App</p>
-            <p className="text-[10px] text-gray-400">Faster access, works offline</p>
-          </div>
+    <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-charcoal text-ivory p-4 rounded-2xl shadow-2xl border border-gold/30 z-[100] flex items-center justify-between animate-slide-up">
+      <div className="flex items-center gap-3">
+        <div className="bg-gold p-2.5 rounded-xl text-black shrink-0">
+          <Download size={20} />
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleInstallClick} className="bg-gold text-black px-3 py-1.5 rounded-md text-xs font-bold">Install</button>
-          <button onClick={() => setShowBanner(false)} className="text-gray-500 hover:text-white"><X size={18} /></button>
+        <div>
+          <p className="font-bold text-sm">Install Jump PropTech</p>
+          <p className="text-[10px] text-gray-400">Add to home screen for the app experience</p>
         </div>
       </div>
-
-      {/* Desktop Sidebar Button (Hidden on mobile) */}
-      <button 
-        onClick={handleInstallClick}
-        className="hidden md:flex items-center gap-3 text-sm text-gold hover:text-gold-light w-full px-4 py-2 mt-2 bg-gold/10 rounded-lg transition-colors border border-gold/20"
-      >
-        <Download size={18} /> Install App
-      </button>
-    </>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={handleInstallClick} 
+          className="bg-gold text-black px-4 py-2 rounded-lg text-xs font-bold shadow-gold hover:opacity-90 transition-opacity"
+        >
+          Install
+        </button>
+        <button onClick={() => setShowBanner(false)} className="text-gray-500 hover:text-white p-1">
+          <X size={18} />
+        </button>
+      </div>
+    </div>
   );
 }
