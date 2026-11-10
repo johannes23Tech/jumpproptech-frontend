@@ -1,13 +1,19 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
-import { Wrench, Users, DollarSign, FileText, CheckCircle, Plus, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { Wrench, Users, DollarSign, FileText, CheckCircle, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import PremiumButton from '../components/PremiumButton';
 import TiltCard from '../components/TiltCard';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 export default function LandlordMaintenance() {
   const [activeTab, setActiveTab] = useState('tickets');
   const [data, setData] = useState<{ tickets: any[], contractors: any[] }>({ tickets: [], contractors: [] });
   const [isContractorModalOpen, setIsContractorModalOpen] = useState(false);
+  const [contractorSubmitting, setContractorSubmitting] = useState(false);
+  const [contractorError, setContractorError] = useState('');
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [expenseError, setExpenseError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [financeData, setFinanceData] = useState<{ expenses: any[], total_rent: number }>({ expenses: [], total_rent: 0 });
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -55,24 +61,42 @@ export default function LandlordMaintenance() {
 
   const handleAddContractor = async (e: FormEvent) => {
     e.preventDefault();
-    await api.addContractor({ name: cName, trade: cTrade, phone: cPhone });
-    setIsContractorModalOpen(false);
-    setCName(''); setCPhone('');
-    fetchData();
+    setContractorSubmitting(true);
+    setContractorError('');
+    try {
+      await api.addContractor({ name: cName, trade: cTrade, phone: cPhone });
+      setIsContractorModalOpen(false);
+      setCName(''); setCPhone('');
+      setSuccessMessage('Contractor added successfully.');
+      await fetchData();
+    } catch (err) {
+      setContractorError(err instanceof Error ? err.message : 'The contractor could not be saved. Please try again.');
+    } finally {
+      setContractorSubmitting(false);
+    }
   };
 
   const handleAddExpense = async (e: FormEvent) => {
     e.preventDefault();
-    await api.addExpense({
-      property_id: Number(expProperty),
-      category: expCategory,
-      amount: Number(expAmount),
-      expense_date: expDate,
-      description: expDesc
-    });
-    setIsExpenseModalOpen(false);
-    setExpAmount(''); setExpDesc('');
-    fetchData();
+    setExpenseSubmitting(true);
+    setExpenseError('');
+    try {
+      await api.addExpense({
+        property_id: Number(expProperty),
+        category: expCategory,
+        amount: Number(expAmount),
+        expense_date: expDate,
+        description: expDesc
+      });
+      setIsExpenseModalOpen(false);
+      setExpAmount(''); setExpDesc('');
+      setSuccessMessage('Expense logged successfully.');
+      await fetchData();
+    } catch (err) {
+      setExpenseError(err instanceof Error ? err.message : 'The expense could not be saved. Please try again.');
+    } finally {
+      setExpenseSubmitting(false);
+    }
   };
 
   const totalExpenses = financeData.expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
@@ -80,6 +104,7 @@ export default function LandlordMaintenance() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <h2 className="font-display text-2xl font-bold">Maintenance & Finance Hub</h2>
 
       <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
@@ -159,7 +184,7 @@ export default function LandlordMaintenance() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-lg font-bold">My Contractor Network</h3>
-              <PremiumButton onClick={() => setIsContractorModalOpen(true)} icon={<Plus size={16} />}>
+              <PremiumButton onClick={() => { setContractorError(''); setSuccessMessage(''); setIsContractorModalOpen(true); }} icon={<Plus size={16} />}>
                 Add Contractor
               </PremiumButton>
             </div>
@@ -208,7 +233,7 @@ export default function LandlordMaintenance() {
 
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <h3 className="font-display text-lg font-bold">Expense Ledger</h3>
-              <PremiumButton onClick={() => setIsExpenseModalOpen(true)} icon={<Plus size={16} />}>
+              <PremiumButton onClick={() => { setExpenseError(''); setSuccessMessage(''); setIsExpenseModalOpen(true); }} icon={<Plus size={16} />}>
                 Log Expense
               </PremiumButton>
             </div>
@@ -256,7 +281,9 @@ export default function LandlordMaintenance() {
               </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsContractorModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                <PremiumButton type="submit" fullWidth>Save Contractor</PremiumButton>
+                <SubmitButton loading={contractorSubmitting} loadingText="Saving contractor..." error={contractorError}>
+                  Save Contractor
+                </SubmitButton>
               </div>
             </form>
           </div>
@@ -297,7 +324,9 @@ export default function LandlordMaintenance() {
               </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                <PremiumButton type="submit" fullWidth icon={<Wallet size={18} />}>Log Expense</PremiumButton>
+                <SubmitButton loading={expenseSubmitting} loadingText="Saving expense..." error={expenseError}>
+                  Log Expense
+                </SubmitButton>
               </div>
             </form>
           </div>

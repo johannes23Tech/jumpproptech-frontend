@@ -270,6 +270,20 @@ export const api = {
     return handleResponse(res);
   },
 
+  getFaqBotQuestions: async (): Promise<{ faqs: { id: string, question: string }[] }> => {
+    const res = await fetch(`${API_URL}/faq_bot.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  askFaqBot: async (question: string): Promise<{ faq_id: string | null, answer: string }> => {
+    const res = await fetch(`${API_URL}/faq_bot.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ question }),
+    });
+    return handleResponse(res);
+  },
+
   // --- CLOUDINARY IMAGE UPLOAD (Optimized) ---
   uploadImage: async (file: File) => {
     const formData = new FormData();

@@ -2,12 +2,16 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
 import { Plus, Building2, MapPin } from 'lucide-react';
 import PremiumButton from '../components/PremiumButton';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 import Modal from '../components/Modal';
 
 export default function Properties() {
   const [properties, setProperties] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Form State
   const [name, setName] = useState('');
@@ -39,6 +43,8 @@ export default function Properties() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
     try {
       await api.createProperty({ 
         name, address, city, province, suburb, postal_code: postalCode, 
@@ -46,17 +52,21 @@ export default function Properties() {
       });
       setIsModalOpen(false);
       setName(''); setAddress(''); setCity(''); setProvince(''); setSuburb(''); setPostalCode(''); setDescription('');
-      fetchProperties();
-    } catch (err: any) {
-      alert(err.message);
+      setSuccessMessage('Property added successfully.');
+      await fetchProperties();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The property could not be saved. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="animate-fade-in">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display text-2xl font-bold">My Properties</h2>
-        <PremiumButton onClick={() => setIsModalOpen(true)} icon={<Plus size={18} />}>
+        <PremiumButton onClick={() => { setSubmitError(''); setSuccessMessage(''); setIsModalOpen(true); }} icon={<Plus size={18} />}>
           Add Property
         </PremiumButton>
       </div>
@@ -67,7 +77,7 @@ export default function Properties() {
         <div className="bg-white p-8 rounded-xl border border-gray-200 text-center shadow-sm">
           <Building2 size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 mb-4">No properties added yet.</p>
-          <button onClick={() => setIsModalOpen(true)} className="text-gold font-bold hover:underline">Add your first property</button>
+          <button onClick={() => { setSubmitError(''); setSuccessMessage(''); setIsModalOpen(true); }} className="text-gold font-bold hover:underline">Add your first property</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -149,9 +159,9 @@ export default function Properties() {
             <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors">
               Cancel
             </button>
-            <PremiumButton type="submit" fullWidth className="flex-1">
+            <SubmitButton loading={submitting} loadingText="Saving property..." error={submitError}>
               Save Property
-            </PremiumButton>
+            </SubmitButton>
           </div>
         </form>
       </Modal>

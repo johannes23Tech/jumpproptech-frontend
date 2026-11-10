@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, Bot } from 'lucide-react';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -14,6 +14,15 @@ export default function Messages() {
   const [text, setText] = useState('');
   const [chatData, setChatData] = useState<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [activeView, setActiveView] = useState<'messages' | 'assistant'>('messages');
+  const [faqs, setFaqs] = useState<{ id: string, question: string }[]>([]);
+  const [assistantMessages, setAssistantMessages] = useState([
+    { id: 0, sender: 'assistant' as const, text: 'Hi! I’m the FAQ Assistant. I can help with rent, maintenance, leases, passwords, and property information.' },
+  ]);
+  const [assistantInput, setAssistantInput] = useState('');
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError] = useState('');
+  const assistantMessageId = useRef(1);
 
   const isTenant = user?.role === 'tenant';
 
@@ -48,8 +57,27 @@ export default function Messages() {
   }, [tenantId, isTenant]);
 
   useEffect(() => {
+    if (activeView !== 'assistant') return;
+
+    let cancelled = false;
+    api.getFaqBotQuestions()
+      .then((res) => {
+        if (!cancelled) setFaqs(res.faqs);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setAssistantError(err instanceof Error ? err.message : 'Could not load FAQ suggestions.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, assistantMessages, activeView]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,12 +92,143 @@ export default function Messages() {
     loadMessages();
   };
 
+  const askAssistant = async (question: string) => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion || assistantLoading) return;
+
+    setAssistantError('');
+    setAssistantInput('');
+    setAssistantMessages((current) => [
+      ...current,
+      { id: assistantMessageId.current++, sender: 'user', text: trimmedQuestion },
+    ]);
+    setAssistantLoading(true);
+
+    try {
+      const res = await api.askFaqBot(trimmedQuestion);
+      setAssistantMessages((current) => [
+        ...current,
+        { id: assistantMessageId.current++, sender: 'assistant', text: res.answer },
+      ]);
+    } catch (err) {
+      setAssistantError(err instanceof Error ? err.message : 'The FAQ Assistant could not respond. Please try again.');
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+
+  const handleAssistantSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void askAssistant(assistantInput);
+  };
+
+  const viewSwitcher = (
+    <div className="flex gap-2 mb-4" role="tablist" aria-label="Messages and FAQ assistant">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeView === 'messages'}
+        onClick={() => setActiveView('messages')}
+        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold ${activeView === 'messages' ? 'bg-charcoal text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gold'}`}
+      >
+        <MessageSquare size={16} /> Messages
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeView === 'assistant'}
+        onClick={() => setActiveView('assistant')}
+        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold ${activeView === 'assistant' ? 'bg-charcoal text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gold'}`}
+      >
+        <Bot size={16} /> FAQ Assistant
+      </button>
+    </div>
+  );
+
+  if (activeView === 'assistant') {
+    return (
+      <div className="max-w-4xl mx-auto">
+        {viewSwitcher}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-[75vh]">
+          <div className="p-4 border-b border-gray-200 bg-ivory rounded-t-2xl flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-black">
+              <Bot size={22} />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-bold">FAQ Assistant</h2>
+              <p className="text-xs text-gray-500">Quick answers to common questions</p>
+            </div>
+          </div>
+
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50" aria-live="polite">
+            {assistantMessages.map((message) => {
+              const isUser = message.sender === 'user';
+              return (
+                <div key={message.id} className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  {!isUser && (
+                    <div className="w-8 h-8 rounded-full bg-charcoal text-gold flex items-center justify-center shrink-0">
+                      <Bot size={16} />
+                    </div>
+                  )}
+                  <div className={`p-3 rounded-2xl shadow-sm max-w-[80%] text-sm ${isUser ? 'bg-gold text-black rounded-tr-none font-medium' : 'bg-white border border-gray-200 rounded-tl-none text-gray-800'}`}>
+                    {message.text}
+                  </div>
+                </div>
+              );
+            })}
+            {assistantLoading && <p className="text-sm text-gray-500">Assistant is thinking…</p>}
+            {assistantError && <p className="text-sm text-red-600" role="alert">{assistantError}</p>}
+            <div ref={bottomRef} />
+          </div>
+
+          {faqs.length > 0 && (
+            <div className="px-4 pt-3 flex gap-2 overflow-x-auto border-t border-gray-100">
+              {faqs.map((faq) => (
+                <button
+                  key={faq.id}
+                  type="button"
+                  disabled={assistantLoading}
+                  onClick={() => void askAssistant(faq.question)}
+                  className="shrink-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:border-gold hover:text-black disabled:opacity-50"
+                >
+                  {faq.question}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={handleAssistantSubmit} className="p-4 bg-white rounded-b-2xl flex gap-2">
+            <input
+              type="text"
+              value={assistantInput}
+              onChange={(e) => setAssistantInput(e.target.value)}
+              maxLength={500}
+              placeholder="Ask a question..."
+              aria-label="Ask the FAQ Assistant a question"
+              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-gold"
+            />
+            <button
+              type="submit"
+              disabled={!assistantInput.trim() || assistantLoading}
+              aria-label="Send question"
+              className="bg-gold text-black p-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              <Send size={20} />
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   // ==========================================
   // VIEW 1: LANDLORD INBOX (No tenantId selected)
   // ==========================================
   if (!isTenant && !tenantId) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div>
+        {viewSwitcher}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 className="font-display text-xl font-bold mb-4">Message Inbox</h2>
         <p className="text-xs text-gray-500 mb-6">Select a tenant to open a secure chat channel.</p>
 
@@ -97,6 +256,7 @@ export default function Messages() {
             ))}
           </div>
         )}
+        </div>
       </div>
     );
   }
@@ -108,6 +268,7 @@ export default function Messages() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {viewSwitcher}
       {/* Back button for Landlord to return to inbox */}
       {!isTenant && (
         <button onClick={() => navigate('/messages')} className="inline-flex items-center gap-2 text-gold font-bold mb-4 hover:underline">

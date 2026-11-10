@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
 import { Camera, Plus, Wrench, CheckCircle } from 'lucide-react';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 export default function TenantMaintenance() {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -12,6 +13,10 @@ export default function TenantMaintenance() {
   const [priority, setPriority] = useState('Routine');
   const [photo, setPhoto] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [photoError, setPhotoError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const fetchTickets = async () => {
     const res = await api.getMaintenanceData();
@@ -25,11 +30,12 @@ export default function TenantMaintenance() {
     const file = e.target.files?.[0];
     if (file) {
       setUploading(true);
+      setPhotoError('');
       try {
         const imageUrl = await api.uploadImage(file);
         setPhoto(imageUrl);
       } catch (err) {
-        alert("Failed to upload image. Please try again.");
+        setPhotoError(err instanceof Error ? err.message : 'The photo could not be uploaded. Please try again.');
       } finally {
         setUploading(false);
       }
@@ -38,20 +44,33 @@ export default function TenantMaintenance() {
 
   const handleLogIssue = async (e: FormEvent) => {
     e.preventDefault();
-    if (!photo) return alert("A photo is required to submit a maintenance ticket.");
-    
-    await api.logMaintenance({ category, description, priority, photo });
-    setIsModalOpen(false);
-    setDescription('');
-    setPhoto('');
-    fetchTickets();
+    if (!photo) {
+      setSubmitError('Attach a photo before submitting the maintenance request.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await api.logMaintenance({ category, description, priority, photo });
+      setIsModalOpen(false);
+      setDescription('');
+      setPhoto('');
+      setSuccessMessage('Maintenance request submitted successfully.');
+      void fetchTickets().catch((err) => console.error('Maintenance request saved but tickets could not be refreshed.', err));
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The maintenance request could not be submitted. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <div className="flex justify-between items-center">
         <h2 className="font-display text-xl font-bold">My Maintenance Tickets</h2>
-        <button onClick={() => setIsModalOpen(true)} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90">
+        <button onClick={() => { setSubmitError(''); setPhotoError(''); setSuccessMessage(''); setIsModalOpen(true); }} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90">
           <Plus size={18} /> Log New Issue
         </button>
       </div>
@@ -120,6 +139,8 @@ export default function TenantMaintenance() {
                   </p>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
                 </label>
+                {photoError && <p role="alert" className="mt-2 text-sm text-danger">{photoError}</p>}
+                {!photo && !photoError && <p className="mt-2 text-xs text-gray-500">A photo is required to submit this request.</p>}
               </div>
 
               <div>
@@ -132,9 +153,14 @@ export default function TenantMaintenance() {
               
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg">Cancel</button>
-                <button type="submit" disabled={!photo || uploading} className="flex-1 py-3 bg-gold text-black font-bold rounded-lg disabled:opacity-50">
+                <SubmitButton
+                  loading={submitting || uploading}
+                  loadingText={uploading ? 'Uploading photo...' : 'Submitting request...'}
+                  error={submitError}
+                  disabled={!photo}
+                >
                   Submit Ticket
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </div>

@@ -3,6 +3,7 @@ import { api } from '../utils/api';
 import { Plus, Key, User } from 'lucide-react';
 import PremiumButton from '../components/PremiumButton';
 import Modal from '../components/Modal';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 export default function Units() {
   const [units, setUnits] = useState<any[]>([]);
@@ -10,6 +11,9 @@ export default function Units() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [propertyId, setPropertyId] = useState('');
   const [unitNumber, setUnitNumber] = useState('');
@@ -40,6 +44,8 @@ export default function Units() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
     try {
       await api.createUnit({
         property_id: Number(propertyId), unit_number: unitNumber,
@@ -49,17 +55,21 @@ export default function Units() {
       });
       setIsModalOpen(false);
       setUnitNumber(''); setRent(''); setIncludedItems(''); setTenantId('');
-      fetchData();
-    } catch (err: any) {
-      alert(err.message);
+      setSuccessMessage('Unit added successfully.');
+      await fetchData();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The unit could not be saved. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="animate-fade-in">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display text-2xl font-bold">Units & Rooms</h2>
-        <PremiumButton onClick={() => setIsModalOpen(true)} icon={<Plus size={18} />} disabled={properties.length === 0}>
+        <PremiumButton onClick={() => { setSubmitError(''); setSuccessMessage(''); setIsModalOpen(true); }} icon={<Plus size={18} />} disabled={properties.length === 0}>
           Add Unit
         </PremiumButton>
       </div>
@@ -156,7 +166,9 @@ export default function Units() {
 
           <div className="flex gap-4 pt-4 border-t border-gray-200 mt-6">
             <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
-            <PremiumButton type="submit" fullWidth className="flex-1">Save Unit</PremiumButton>
+            <SubmitButton loading={submitting} loadingText="Saving unit..." error={submitError}>
+              Save Unit
+            </SubmitButton>
           </div>
         </form>
       </Modal>

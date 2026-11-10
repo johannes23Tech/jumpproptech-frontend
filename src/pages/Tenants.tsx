@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import PremiumButton from '../components/PremiumButton';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 export default function Tenants() {
   const navigate = useNavigate();
@@ -14,6 +15,9 @@ export default function Tenants() {
   const [vacantUnits, setVacantUnits] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Form State
   const [unitId, setUnitId] = useState('');
@@ -51,6 +55,8 @@ export default function Tenants() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
     try {
       await api.createTenant({
         unit_id: Number(unitId), name, phone, email, password,
@@ -59,9 +65,12 @@ export default function Tenants() {
       });
       setIsModalOpen(false);
       setName(''); setPhone(''); setEmail(''); setPassword(''); setLeaseStart(''); setLeaseEnd('');
-      fetchData();
-    } catch (err: any) {
-      alert(err.message);
+      setSuccessMessage('Tenant added successfully.');
+      await fetchData();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The tenant could not be saved. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -87,9 +96,10 @@ export default function Tenants() {
 
   return (
     <div className="animate-fade-in">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display text-2xl font-bold">Tenants</h2>
-        <PremiumButton onClick={() => setIsModalOpen(true)} disabled={vacantUnits.length === 0} icon={<Plus size={18} />}>
+        <PremiumButton onClick={() => { setSubmitError(''); setSuccessMessage(''); setIsModalOpen(true); }} disabled={vacantUnits.length === 0} icon={<Plus size={18} />}>
           Add Tenant
         </PremiumButton>
       </div>
@@ -321,7 +331,9 @@ export default function Tenants() {
 
           <div className="flex gap-4 pt-4 border-t border-gray-200 mt-6">
             <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
-            <PremiumButton type="submit" fullWidth className="flex-1">Save Tenant</PremiumButton>
+            <SubmitButton loading={submitting} loadingText="Saving tenant..." error={submitError}>
+              Save Tenant
+            </SubmitButton>
           </div>
         </form>
       </Modal>

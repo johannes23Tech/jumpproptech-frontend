@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { ShieldCheck, Building2, Key, Users, TrendingUp, Ban, CheckCircle, Plus } from 'lucide-react';
+import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Form State for new Landlord
   const [fullName, setFullName] = useState('');
@@ -33,14 +37,18 @@ export default function SuperAdminDashboard() {
 
   const handleCreateLandlord = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
     try {
       await api.createLandlord({ full_name: fullName, email, password });
-      alert('Landlord created successfully!');
       setIsModalOpen(false);
       setFullName(''); setEmail(''); setPassword('');
+      setSuccessMessage('Landlord created successfully.');
       fetchStats();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The landlord account could not be created. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -49,6 +57,7 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       <div className="bg-gradient-to-r from-charcoal to-black p-6 rounded-2xl border border-gold/30 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="bg-gold p-3 rounded-xl">
@@ -59,7 +68,7 @@ export default function SuperAdminDashboard() {
             <p className="text-gold-light text-sm">Global platform overview for Jump Living.</p>
           </div>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 text-sm">
+        <button onClick={() => { setSubmitError(''); setSuccessMessage(''); setIsModalOpen(true); }} className="bg-gold text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 text-sm">
           <Plus size={16} /> Create Landlord
         </button>
       </div>
@@ -133,7 +142,9 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-gold text-black font-bold rounded-lg hover:opacity-90 transition-opacity">Create Landlord</button>
+                <SubmitButton loading={submitting} loadingText="Creating landlord..." error={submitError}>
+                  Create Landlord
+                </SubmitButton>
               </div>
             </form>
           </div>
