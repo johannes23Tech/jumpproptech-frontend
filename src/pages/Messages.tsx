@@ -3,6 +3,7 @@ import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MessageSquare, Bot } from 'lucide-react';
+import './Messages.css';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -147,49 +148,74 @@ export default function Messages() {
 
   if (activeView === 'assistant') {
     return (
-      <div className="max-w-4xl mx-auto">
-        {viewSwitcher}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-[75vh]">
-          <div className="p-4 border-b border-gray-200 bg-ivory rounded-t-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-black">
-              <Bot size={22} />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-bold">FAQ Assistant</h2>
-              <p className="text-xs text-gray-500">Quick answers to common questions</p>
-            </div>
-          </div>
+      <section className="faq-assistant" aria-labelledby="faq-assistant-title">
+        <div className="faq-assistant__media" aria-hidden="true">
+          <video
+            className="faq-assistant__video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_132328_5f9029c8-218f-4489-82b6-29ff2849920e.png"
+          >
+            <source
+              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_133255_956f653f-5d80-4b06-abd5-0f46c98b60fa.mp4"
+              type="video/mp4"
+            />
+          </video>
+        </div>
+        <div className="faq-assistant__scrim" aria-hidden="true" />
+        <div className="faq-assistant__content">
+          <nav className="faq-assistant__tabs" role="tablist" aria-label="Messages and FAQ assistant">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'messages'}
+              onClick={() => setActiveView('messages')}
+              className="faq-assistant__tab"
+            >
+              Messages
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'assistant'}
+              onClick={() => setActiveView('assistant')}
+              className="faq-assistant__tab"
+            >
+              FAQ Assistant
+            </button>
+          </nav>
 
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50" aria-live="polite">
+          <div className="faq-assistant__conversation">
+            <span className="faq-assistant__eyebrow">[ Property help ]</span>
+            <h2 id="faq-assistant-title" className="faq-assistant__title">FAQ Assistant</h2>
+            <p className="faq-assistant__subtitle">Quick answers about your home and account.</p>
+
+            <div className="faq-assistant__log" aria-live="polite" aria-label="Chat conversation">
             {assistantMessages.map((message) => {
               const isUser = message.sender === 'user';
               return (
-                <div key={message.id} className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
-                  {!isUser && (
-                    <div className="w-8 h-8 rounded-full bg-charcoal text-gold flex items-center justify-center shrink-0">
-                      <Bot size={16} />
-                    </div>
-                  )}
-                  <div className={`p-3 rounded-2xl shadow-sm max-w-[80%] text-sm ${isUser ? 'bg-gold text-black rounded-tr-none font-medium' : 'bg-white border border-gray-200 rounded-tl-none text-gray-800'}`}>
+                <div key={message.id} className={`faq-assistant__message ${isUser ? 'faq-assistant__message--user' : ''}`}>
                     {message.text}
-                  </div>
                 </div>
               );
             })}
-            {assistantLoading && <p className="text-sm text-gray-500">Assistant is thinking…</p>}
-            {assistantError && <p className="text-sm text-red-600" role="alert">{assistantError}</p>}
+            {assistantLoading && <p className="faq-assistant__thinking">Assistant is thinking…</p>}
+            {assistantError && <p className="faq-assistant__error" role="alert">{assistantError}</p>}
             <div ref={bottomRef} />
           </div>
 
           {faqs.length > 0 && (
-            <div className="px-4 pt-3 flex gap-2 overflow-x-auto border-t border-gray-100">
+            <div className="faq-assistant__suggestions" aria-label="Suggested questions">
               {faqs.map((faq) => (
                 <button
                   key={faq.id}
                   type="button"
                   disabled={assistantLoading}
                   onClick={() => void askAssistant(faq.question)}
-                  className="shrink-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:border-gold hover:text-black disabled:opacity-50"
+                  className="faq-assistant__suggestion"
                 >
                   {faq.question}
                 </button>
@@ -197,7 +223,7 @@ export default function Messages() {
             </div>
           )}
 
-          <form onSubmit={handleAssistantSubmit} className="p-4 bg-white rounded-b-2xl flex gap-2">
+          <form onSubmit={handleAssistantSubmit} className="faq-assistant__form">
             <input
               type="text"
               value={assistantInput}
@@ -205,19 +231,20 @@ export default function Messages() {
               maxLength={500}
               placeholder="Ask a question..."
               aria-label="Ask the FAQ Assistant a question"
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-gold"
+              className="faq-assistant__input"
             />
             <button
               type="submit"
               disabled={!assistantInput.trim() || assistantLoading}
               aria-label="Send question"
-              className="bg-gold text-black p-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="faq-assistant__send"
             >
               <Send size={20} />
             </button>
           </form>
         </div>
       </div>
+      </section>
     );
   }
 
