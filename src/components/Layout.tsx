@@ -1,10 +1,10 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
   FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
-  Download, ShieldAlert 
+  Download, ShieldAlert, ShieldCheck, MoreHorizontal
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
@@ -14,7 +14,13 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { promptInstall } = usePWAInstall();
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsMoreOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -25,13 +31,14 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Landlord Navigation (The first 5 will show on mobile)
   const ownerNav = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', path: '/manage', icon: LayoutDashboard },
     { name: 'Properties', path: '/properties', icon: Building2 },
     { name: 'Units', path: '/units', icon: Key },
     { name: 'Tenants', path: '/tenants', icon: Users },
     { name: 'Rent', path: '/rent', icon: Wallet },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
+    { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
   // Add Admin Portal link if the user is a superadmin
@@ -41,7 +48,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Tenant Navigation (Exactly 5 for the mobile bottom bar)
   const tenantNav = [
-    { name: 'Home', path: '/', icon: LayoutDashboard },
+    { name: 'Home', path: '/tenant-dashboard', icon: LayoutDashboard },
     { name: 'Payments', path: '/payments', icon: CreditCard },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
@@ -52,11 +59,19 @@ export default function Layout({ children }: { children: ReactNode }) {
   const desktopTenantNav = [
     ...tenantNav.slice(0, 4), // Home, Payments, Maintenance, Messages
     { name: 'Lease & Docs', path: '/documents', icon: FileText },
-    ...tenantNav.slice(4) // Profile
+    ...tenantNav.slice(4), // Profile
+    { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
   const navItems = isTenant ? desktopTenantNav : ownerNav;
-  const mobileNavItems = isTenant ? tenantNav : ownerNav.slice(0, 5);
+  const primaryMobilePaths = isTenant
+    ? ['/tenant-dashboard', '/payments', '/maintenance', '/messages']
+    : ['/manage', '/tenants', '/rent', '/maintenance'];
+  const mobileNavItems = navItems.filter(item => primaryMobilePaths.includes(item.path));
+  const moreNavItems = navItems.filter(item => !primaryMobilePaths.includes(item.path));
+  if (!isTenant) {
+    moreNavItems.push({ name: 'My Account', path: '/landlord-profile', icon: UserCircle });
+  }
 
   return (
     <div className="flex min-h-screen bg-ivory">
@@ -74,8 +89,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.path === '/' 
-              ? location.pathname === '/' 
+            const isActive = item.path === '/manage' || item.path === '/tenant-dashboard'
+              ? location.pathname === item.path
               : location.pathname.startsWith(item.path);
 
             return (
@@ -101,12 +116,15 @@ export default function Layout({ children }: { children: ReactNode }) {
           
           {/* Avatar Dropdown Menu */}
           <div className="relative">
-            <div 
+            <button
+              type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-90 transition-opacity"
+              aria-label="Open account menu"
+              aria-expanded={isMenuOpen}
+              className="w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold text-sm hover:opacity-90 transition-opacity"
             >
               {user?.full_name?.split(' ').map(n => n[0]).join('')}
-            </div>
+            </button>
 
             {isMenuOpen && (
               <>
@@ -137,6 +155,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                         <UserCircle size={16} /> My Account
                       </Link>
                     )}
+                    <Link
+                      to="/security"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <ShieldCheck size={16} /> Security & 2FA
+                    </Link>
                     <button 
                       onClick={() => { promptInstall(); setIsMenuOpen(false); }}
                       className="flex items-center gap-3 w-full p-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-left"
@@ -163,7 +188,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Bottom Nav (Exactly 5 items) */}
+      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-black border-t border-gray-800 z-40 pb-safe">
         <div className="flex justify-around items-center h-16">
           {mobileNavItems.map((item) => {
@@ -179,8 +204,44 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setIsMoreOpen(open => !open)}
+            aria-expanded={isMoreOpen}
+            aria-label={isMoreOpen ? 'Close more navigation' : 'Open more navigation'}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isMoreOpen ? 'text-gold' : 'text-gray-500'}`}
+          >
+            <MoreHorizontal size={20} />
+            <span className="text-[10px] font-semibold">More</span>
+          </button>
         </div>
       </nav>
+      {isMoreOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close more navigation"
+            onClick={() => setIsMoreOpen(false)}
+            className="md:hidden fixed inset-0 z-30 bg-black/30"
+          />
+          <nav aria-label="More navigation" className="md:hidden fixed bottom-20 right-3 z-40 w-64 rounded-2xl border border-gray-200 bg-white p-2 shadow-2xl">
+            {moreNavItems.map(item => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  onClick={() => setIsMoreOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${isActive ? 'bg-gold/10 text-black' : 'text-gray-700 hover:bg-gray-100'}`}
+                >
+                  <Icon size={18} /> {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </>
+      )}
     </div>
   );
 }

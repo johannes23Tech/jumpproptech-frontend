@@ -31,7 +31,7 @@ export default function TenantDashboard() {
   const goToProfile = () => {
     localStorage.removeItem('just_registered');
     setShowPrompt(false);
-    navigate('/profile');
+    navigate('/profile', { state: { editProfile: true } });
   };
 
   if (!data) return <div className="p-8 text-center text-gray-500">Loading...</div>;

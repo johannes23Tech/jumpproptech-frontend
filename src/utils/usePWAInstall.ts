@@ -1,13 +1,25 @@
 // src/utils/usePWAInstall.ts
 import { useState, useEffect } from 'react';
 
+export function downloadAndroidApk() {
+  const link = document.createElement('a');
+  link.href = '/downloads/JumpPropTech.apk';
+  link.download = 'JumpPropTech.apk';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isAndroidDevice = /Android/i.test(navigator.userAgent);
     setIsIOS(isIosDevice);
+    setIsAndroid(isAndroidDevice);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -19,7 +31,9 @@ export function usePWAInstall() {
   }, []);
 
   const promptInstall = async () => {
-    if (deferredPrompt) {
+    if (isAndroid) {
+      downloadAndroidApk();
+    } else if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') setDeferredPrompt(null);

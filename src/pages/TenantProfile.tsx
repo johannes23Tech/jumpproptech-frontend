@@ -1,9 +1,11 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../utils/api';
 import { Lock, Upload, CheckCircle, Users, Phone, Mail, User } from 'lucide-react';
-import Toast from '../components/Toast'; // <-- FIXED IMPORT PATH
+import Toast from '../components/Toast';
 
 export default function TenantProfile() {
+  const location = useLocation();
   const [tenantData, setTenantData] = useState<any>(null);
   const [profile, setProfile] = useState<any>({
     phone: '', id_number: '', occupants: 1, second_occupant_name: '', 
@@ -12,18 +14,23 @@ export default function TenantProfile() {
     emergency_contact_email: '', alt_email: '', id_document: ''
   });
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(Boolean(location.state?.editProfile));
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const [profileData, dashboardData] = await Promise.all([
-          api.getTenantProfile(),
-          api.getTenantData()
-        ]);
+    let cancelled = false;
 
+    const fetchAllData = async () => {
+      const [profileResult, dashboardResult] = await Promise.allSettled([
+        api.getTenantProfile(),
+        api.getTenantData()
+      ]);
+
+      if (cancelled) return;
+
+      if (profileResult.status === 'fulfilled') {
+        const profileData = profileResult.value;
         if (profileData) {
           setProfile({
             phone: profileData.phone || '',
@@ -40,16 +47,28 @@ export default function TenantProfile() {
             id_document: profileData.id_document || ''
           });
         }
-        if (dashboardData && dashboardData.tenant) {
-          setTenantData(dashboardData.tenant);
-        }
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Failed to load tenant profile details:', profileResult.reason);
+        setToast({ msg: 'Could not load saved profile details.', type: 'error' });
       }
+
+      if (dashboardResult.status === 'fulfilled' && dashboardResult.value?.tenant) {
+        setTenantData(dashboardResult.value.tenant);
+      } else {
+        const error = dashboardResult.status === 'rejected'
+          ? dashboardResult.reason
+          : new Error('Tenant details were missing from the server response.');
+        console.error('Failed to load tenant details:', error);
+      }
+
+      setLoading(false);
     };
+
     fetchAllData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +108,7 @@ export default function TenantProfile() {
     );
   }
 
-  if (!tenantData) return <div className="p-8 text-center text-danger">Failed to load profile data.</div>;
+  if (!tenantData) return <div className="p-8 text-center text-danger">Failed to load tenant details. Please refresh and try again.</div>;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-12 w-full overflow-hidden">

@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
+import { validatePassword } from '../utils/security';
 import { 
   Plus, MessageSquare, FileText, X, User, ShieldAlert, 
   Car, Phone, Mail, Users, Calendar, DollarSign 
@@ -55,6 +56,11 @@ export default function Tenants() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setSubmitError(passwordError);
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -314,8 +320,8 @@ export default function Tenants() {
 
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Temporary Password</label>
-            <input type="text" required placeholder="e.g. Welcome123" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
-            <p className="text-[10px] text-gray-500 mt-1">Provide this to the tenant so they can log in.</p>
+            <input type="text" required autoComplete="new-password" placeholder="e.g. JumpHome1!" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none" />
+            <p className="text-[10px] text-gray-500 mt-1">Use 8–12 characters with uppercase and lowercase letters, a number, and a symbol. Provide this to the tenant so they can log in.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

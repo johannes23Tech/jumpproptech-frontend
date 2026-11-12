@@ -1,11 +1,20 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
+import { validatePassword } from '../utils/security';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // Read once. The token is single-use and must not stay in the URL, where it
+  // can leak through history, screenshots or referrer headers.
+  const [token] = useState(() => searchParams.get('token'));
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (token) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [token]);
 
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -19,11 +28,18 @@ export default function ResetPassword() {
       return;
     }
 
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      const res = await api.resetPassword({ token, new_password: newPassword });
+      const res = await api.resetPassword({ token, password: newPassword });
+      setNewPassword('');
       setMessage(res.message);
       setTimeout(() => navigate('/login'), 3000); // Redirect to login after 3 seconds
     } catch (err: any) {
@@ -48,7 +64,8 @@ export default function ResetPassword() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">New Password</label>
-            <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-ivory focus:border-gold outline-none" />
+            <input type="password" autoComplete="new-password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-ivory focus:border-gold outline-none" />
+            <p className="text-gray-500 text-xs mt-1">Use 8–12 characters with uppercase and lowercase letters, a number, and a symbol.</p>
           </div>
           
           <button type="submit" disabled={loading || !token} className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-4 hover:opacity-90 disabled:opacity-50">

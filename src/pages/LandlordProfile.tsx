@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
+import { validatePassword } from '../utils/security';
 import { CheckCircle, Lock } from 'lucide-react';
 
 export default function LandlordProfile() {
@@ -14,6 +15,17 @@ export default function LandlordProfile() {
     e.preventDefault();
     setSuccess(false);
     setError('');
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setError('New password must be different from the current password.');
+      return;
+    }
+
     try {
       // We need to add this to the API
       await api.changePassword({ currentPassword, newPassword });
@@ -52,11 +64,12 @@ export default function LandlordProfile() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Current Password</label>
-            <input type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
+            <input type="password" autoComplete="current-password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
-            <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
+            <input type="password" autoComplete="new-password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
+            <p className="text-gray-500 text-xs mt-1">Use 8–12 characters with uppercase and lowercase letters, a number, and a symbol.</p>
           </div>
           <button type="submit" className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-2 hover:opacity-90 transition-opacity">Update Password</button>
         </form>

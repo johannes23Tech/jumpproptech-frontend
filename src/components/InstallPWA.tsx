@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
+import { downloadAndroidApk } from '../utils/usePWAInstall';
 
 export default function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     // 1. Check if app is already installed (standalone mode)
@@ -15,6 +17,13 @@ export default function InstallPWA() {
     const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if (isIosDevice) {
       return;
+    }
+
+    const isAndroidDevice = /Android/i.test(navigator.userAgent);
+    setIsAndroid(isAndroidDevice);
+    if (isAndroidDevice) {
+      const timer = window.setTimeout(() => setShowBanner(true), 2000);
+      return () => window.clearTimeout(timer);
     }
 
     // 3. Listen for the Android/Chrome/Edge install prompt
@@ -30,6 +39,10 @@ export default function InstallPWA() {
   }, []);
 
   const handleInstallClick = async () => {
+    if (isAndroid) {
+      downloadAndroidApk();
+      return;
+    }
     if (!deferredPrompt) return;
 
     // Trigger the native Android install prompt
@@ -42,8 +55,7 @@ export default function InstallPWA() {
     }
   };
 
-  // If no Android prompt is available, or on iOS, don't show anything.
-  if (!showBanner || !deferredPrompt) return null;
+  if (!showBanner || (!isAndroid && !deferredPrompt)) return null;
 
   return (
     <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-charcoal text-ivory p-4 rounded-2xl shadow-2xl border border-gold/30 z-[100] flex items-center justify-between animate-slide-up">
@@ -52,8 +64,8 @@ export default function InstallPWA() {
           <Download size={20} />
         </div>
         <div>
-          <p className="font-bold text-sm">Install Jump PropTech</p>
-          <p className="text-[10px] text-gray-400">Add to home screen for the app experience</p>
+          <p className="font-bold text-sm">{isAndroid ? 'Download Jump PropTech' : 'Install Jump PropTech'}</p>
+          <p className="text-[10px] text-gray-400">{isAndroid ? 'Download the Android app APK' : 'Add to home screen for the app experience'}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -61,7 +73,7 @@ export default function InstallPWA() {
           onClick={handleInstallClick} 
           className="bg-gold text-black px-4 py-2 rounded-lg text-xs font-bold shadow-gold hover:opacity-90 transition-opacity"
         >
-          Install
+          {isAndroid ? 'Download APK' : 'Install'}
         </button>
         <button onClick={() => setShowBanner(false)} className="text-gray-500 hover:text-white p-1">
           <X size={18} />

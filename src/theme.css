@@ -1,0 +1,16 @@
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-surface: #141414;
+  --bg-elevated: #1c1c1c;
+  --border-subtle: #2a2a2a;
+  --gold-500: #d4af37;
+  --gold-300: #f0d77a;
+  --gold-700: #8f6b1f;
+  --gradient-gold: linear-gradient(135deg, #8f6b1f, #d4af37 50%, #f0d77a);
+  --text-primary: #f5f1e6;
+  --text-secondary: #b8b2a0;
+  --text-muted: #9c9688;
+  --semantic-success: #3fb27f;
+  --semantic-warning: #e0a030;
+  --semantic-error: #e5484d;
+}

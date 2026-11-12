@@ -25,6 +25,8 @@ const LandlordMaintenance = lazy(() => import('./pages/LandlordMaintenance'));
 const LandlordProfile = lazy(() => import('./pages/LandlordProfile'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
+const Security = lazy(() => import('./pages/Security'));
+const Marketplace = lazy(() => import('./marketplace/Marketplace'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -35,7 +37,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 const OwnerRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  if (user?.role === 'tenant') return <Navigate to="/" />;
+  if (user?.role === 'tenant') return <Navigate to="/tenant-dashboard" />;
   return <>{children}</>;
 };
 
@@ -50,13 +52,16 @@ function AppRoutes() {
       </div>
     }>
       <Routes>
+        <Route path="/" element={<Marketplace />} />
+        <Route path="/explore" element={<Marketplace />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/paywall" element={<Paywall />} />
         
         {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
-        <Route path="/" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
+        <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
+        <Route path="/tenant-dashboard" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
         
         <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
         <Route path="/payments" element={<ProtectedRoute><TenantPayments /></ProtectedRoute>} />
@@ -76,6 +81,7 @@ function AppRoutes() {
         <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
         <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><OwnerRoute><SuperAdminDashboard /></OwnerRoute></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" />} />

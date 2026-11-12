@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { Download, Mail, X, Filter } from 'lucide-react';
+import { Download, Mail, X, Filter, RotateCw } from 'lucide-react';
 import ReceiptTemplate from '../components/ReceiptTemplate';
 
 export default function TenantPayments() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [emailStatus, setEmailStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [filterMonths, setFilterMonths] = useState(6); 
 
+  const loadStatement = async () => {
+    try {
+      const response = await api.getTenantData();
+      setData(response);
+      setLoadError('');
+    } catch (error) {
+      console.error('Failed to load tenant statement:', error);
+      setLoadError(error instanceof Error ? error.message : 'Could not load your statement.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api.getTenantData().then(res => setData(res)).catch(console.error);
+    void loadStatement();
   }, []);
 
   const handleDownloadPDF = () => {
@@ -20,19 +35,21 @@ export default function TenantPayments() {
   };
 
   const handleEmail = async () => {
-    setEmailStatus('Sending...');
+    if (!selectedRecord?.receipt_number || !user?.email || emailStatus === 'sending') return;
+    setEmailStatus('sending');
     try {
       await api.sendReceiptEmail({ email: user?.email || '', receipt_number: selectedRecord.receipt_number });
-      setEmailStatus('Sent successfully!');
-      setTimeout(() => setEmailStatus(''), 3000);
-    } catch (err) {
-      setEmailStatus('Failed to send.');
+      setEmailStatus('success');
+    } catch (error) {
+      console.error('Failed to email receipt:', error);
+      setEmailStatus('error');
     }
   };
 
-  if (!data) return <div className="p-8 text-center text-gray-500">Loading...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500" role="status">Loading your statement...</div>;
 
-  const filteredRent = data.rent.filter((r: any) => {
+  const rentRecords = Array.isArray(data?.rent) ? data.rent : [];
+  const filteredRent = rentRecords.filter((r: any) => {
     if (filterMonths === 0) return true;
     const recordDate = new Date(r.month_for);
     const cutoffDate = new Date();
@@ -43,6 +60,14 @@ export default function TenantPayments() {
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden animate-fade-in">
       
+      {loadError ? (
+        <div role="alert" className="rounded-2xl border border-danger/20 bg-danger/10 p-5 text-danger">
+          <p className="font-semibold">{loadError}</p>
+          <button type="button" onClick={() => { setLoading(true); void loadStatement(); }} className="mt-3 inline-flex items-center gap-2 font-bold underline">
+            <RotateCw size={16} /> Try again
+          </button>
+        </div>
+      ) : (
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-premium">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h2 className="font-display text-xl font-bold">My Statement</h2>
@@ -69,7 +94,14 @@ export default function TenantPayments() {
 
         <div className="space-y-3">
           {filteredRent.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No records found for this period.</p>
+            <div className="text-center text-gray-500 py-10">
+              <p className="font-semibold">{rentRecords.length === 0 ? 'No rent records yet.' : 'No records found for this period.'}</p>
+              {rentRecords.length > 0 && (
+                <button type="button" onClick={() => setFilterMonths(0)} className="mt-2 text-sm font-bold text-black underline">
+                  View all records
+                </button>
+              )}
+            </div>
           ) : (
             filteredRent.map((r: any) => (
               <div key={r.id} className="flex flex-col md:flex-row justify-between md:items-center p-4 bg-ivory rounded-xl border border-gray-100 gap-4 hover:shadow-sm transition-shadow">
@@ -87,7 +119,7 @@ export default function TenantPayments() {
                   </div>
                   {r.status === 'Paid' && (
                     <button 
-                      onClick={() => setSelectedRecord(r)}
+                      onClick={() => { setSelectedRecord(r); setEmailStatus('idle'); }}
                       className="bg-black text-gold px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity text-xs"
                     >
                       View Receipt
@@ -99,28 +131,31 @@ export default function TenantPayments() {
           )}
         </div>
       </div>
+      )}
 
       {/* Receipt Modal */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 md:p-4 overflow-y-auto print-overlay">
+        <div role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 md:p-4 overflow-y-auto print-overlay">
           
           {/* Removed overflow-hidden here so the print area isn't cut off */}
           <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl relative my-4 md:my-8 print-modal-content">
             
             <div className="sticky top-0 bg-gray-100 p-3 md:p-4 border-b flex justify-between items-center rounded-t-xl z-10 print:hidden">
-              <h3 className="font-bold text-sm md:text-lg">Receipt Preview</h3>
+              <h3 id="receipt-title" className="font-bold text-sm md:text-lg">Receipt Preview</h3>
               <div className="flex gap-2">
                 <button onClick={handleDownloadPDF} className="bg-gold text-black px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-xs hover:opacity-90">
                   <Download size={14} /> Save PDF
                 </button>
-                <button onClick={handleEmail} disabled={emailStatus === 'Sending...'} className="bg-black text-white px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-xs hover:opacity-90 disabled:opacity-50">
-                  <Mail size={14} /> {emailStatus || 'Email'}
+                <button onClick={handleEmail} disabled={emailStatus === 'sending' || !selectedRecord.receipt_number} className="bg-black text-white px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-xs hover:opacity-90 disabled:opacity-50">
+                  <Mail size={14} /> {emailStatus === 'sending' ? 'Sending...' : emailStatus === 'success' ? 'Sent' : emailStatus === 'error' ? 'Retry email' : 'Email'}
                 </button>
-                <button onClick={() => setSelectedRecord(null)} className="text-gray-500 hover:text-danger p-1">
+                <button aria-label="Close receipt" onClick={() => { setSelectedRecord(null); setEmailStatus('idle'); }} className="text-gray-500 hover:text-danger p-1">
                   <X size={20} />
                 </button>
               </div>
             </div>
+            {emailStatus === 'success' && <p role="status" className="bg-success/10 px-4 py-2 text-sm font-semibold text-success print:hidden">Receipt emailed to {user?.email}.</p>}
+            {emailStatus === 'error' && <p role="alert" className="bg-danger/10 px-4 py-2 text-sm font-semibold text-danger print:hidden">Could not email the receipt. Please try again.</p>}
 
             <div className="p-2 md:p-8 bg-gray-200 print:bg-transparent print:p-0 overflow-x-auto">
                <div className="print-area min-w-[600px] md:min-w-0">
