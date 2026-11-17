@@ -1,6 +1,8 @@
 # Jump PropTech
 
-Jump PropTech is a mobile-first South African property marketplace and property-management frontend built with React, TypeScript, Vite, Tailwind CSS, and Lucide icons.
+Jump PropTech is the internal, mobile-first property-management PWA for JUMP Living's company-owned rental portfolio in South Africa. It is built with React, TypeScript, Vite, Tailwind CSS, and Lucide icons, and is deployed to Vercel.
+
+The public marketplace, landlord/agency self-registration and subscription plans that were prototyped earlier are **frozen and disabled by default**. They are not part of the approved product. Set `VITE_ENABLE_MARKETPLACE=true` only for an explicitly approved demo.
 
 ## Run locally
 
@@ -10,7 +12,7 @@ npm run dev
 npm run build
 ```
 
-The local Vite server proxies `/api` to the Jump PropTech API. Production uses the configured API host. New installs see the introduction, a brief Jump logo reveal, then sign-in or tenant account registration; marketplace access requires an account. Tenant registration uses the existing authentication API. After signup, users can open a separate landlord/agency registration form; it currently saves a local draft because no self-service landlord application endpoint is connected.
+The local Vite server proxies `/api` to the Jump PropTech API. Production uses the configured API host. The default entry point is secure staff/tenant sign-in; signed-in tenants go to the tenant portal and staff go to the management dashboard. Public marketplace screens are not reachable unless `VITE_ENABLE_MARKETPLACE=true` is set.
 
 ## App structure
 
@@ -33,6 +35,7 @@ The prototype marks sample listings, agents, ratings, messages, booking requests
 
 ## Assumptions
 
-- Initial market: Cape Town and the Western Cape, South Africa.
+- Initial market: Rustenburg, North West, South Africa.
 - Currency: South African rand (ZAR); area: square metres.
-- The marketplace is a public discovery experience alongside the existing authenticated management product.
+- The product is an internal company system, not a public marketplace or landlord SaaS.
+- Staff roles are defined in `src/config/roles.ts` and must match the backend permission matrix in `jumpproptech-backend/docs/PERMISSIONS.md`.

@@ -3,6 +3,7 @@ import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MessageSquare, Bot } from 'lucide-react';
+import { isTenantUser } from '../config/roles';
 import './Messages.css';
 
 export default function Messages() {
@@ -25,7 +26,7 @@ export default function Messages() {
   const [assistantError, setAssistantError] = useState('');
   const assistantMessageId = useRef(1);
 
-  const isTenant = user?.role === 'tenant';
+  const isTenant = isTenantUser(user);
 
   const loadMessages = async () => {
     try {

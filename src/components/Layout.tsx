@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
+import { hasPermission, isTenantUser, roleLabel } from '../config/roles';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -27,7 +28,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     navigate('/login');
   };
 
-  const isTenant = user?.role === 'tenant';
+  const isTenant = isTenantUser(user);
 
   // Landlord Navigation (The first 5 will show on mobile)
   const ownerNav = [
@@ -41,9 +42,14 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
-  // Add Admin Portal link if the user is a superadmin
-  if (user?.role === 'superadmin') {
+  // Add Admin Portal link for super administrators.
+  if (hasPermission(user, 'settings.manage')) {
     ownerNav.push({ name: 'Admin Portal', path: '/admin', icon: ShieldAlert });
+  }
+
+  // Staff management is permission-gated on the server too.
+  if (hasPermission(user, 'staff.manage')) {
+    ownerNav.push({ name: 'Staff', path: '/staff', icon: Users });
   }
 
   // Tenant Navigation (Exactly 5 for the mobile bottom bar)
@@ -82,7 +88,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div>
             <h1 className="font-display text-lg">Jump PropTech</h1>
             <p className="text-[9px] tracking-widest text-gold uppercase">
-              {isTenant ? 'Tenant Portal' : user?.role === 'superadmin' ? 'System Admin' : 'Landlord Portal'}
+              {isTenant ? 'Tenant Portal' : hasPermission(user, 'settings.manage') ? 'System Admin' : 'Property Management'}
             </p>
           </div>
         </div>
@@ -135,7 +141,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden fade-in">
                   <div className="p-4 border-b border-gray-100 bg-gray-50">
                     <p className="font-bold text-black truncate">{user?.full_name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                    <p className="text-xs text-gray-500 capitalize">{roleLabel(user?.staff_role || user?.role)}</p>
                   </div>
                   <div className="p-2 space-y-1">
                     {isTenant ? (

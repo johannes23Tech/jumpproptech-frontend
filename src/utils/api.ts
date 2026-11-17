@@ -46,10 +46,9 @@ const handleResponse = async (res: Response) => {
 
   // 2. Handle error responses
   if (!res.ok) {
-    // GLOBAL PAYWALL INTERCEPTOR
-    if (res.status === 402) {
-      window.location.href = '/paywall';
-    }
+    // The retired SaaS paywall no longer intercepts API responses. A 402 from
+    // an old deployment is shown as a normal error until every environment is
+    // redeployed.
 
     // Session expired/invalid: drop the locally cached credentials.
     if (res.status === 401) {
@@ -335,6 +334,32 @@ export const api = {
       method: 'POST', 
       headers: getHeaders(), 
       body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+
+  // --- STAFF MANAGEMENT ---
+  getStaff: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/staff.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  createStaff: async (data: {
+    full_name: string; email: string; phone?: string; password: string; staff_role: string;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/staff.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  updateStaff: async (data: { id: number; staff_role?: string; is_active?: boolean }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/staff.php`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
     });
     return handleResponse(res);
   },

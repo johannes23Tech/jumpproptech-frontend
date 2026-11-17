@@ -1,12 +1,16 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '../utils/api';
 import { isJwtExpired } from '../utils/security';
+import type { StaffRole, UserRole } from '../config/roles';
 
 export type User = {
   id: number;
   full_name: string;
   email: string;
-  role: 'landlord' | 'agent' | 'tenant' | 'maintenance' | 'superadmin';
+  role: UserRole;
+  staff_role?: StaffRole | null;
+  account_type?: 'staff' | 'tenant';
+  permissions?: string[];
 };
 
 type AuthContextType = {

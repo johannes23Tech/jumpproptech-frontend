@@ -171,8 +171,14 @@ export default function Login() {
           {isRegistering ? 'Create your account.' : 'Welcome back!'}
         </h2>
         <p className="text-sm text-gray-400 mb-6">
-          {isRegistering ? 'Create a tenant account to discover properties, save favourites, and contact property professionals.' : 'Sign in to continue to your Jump account.'}
+          {isRegistering ? 'Create your tenant account to view your unit, lease, rent and maintenance requests.' : 'Sign in to continue to your Jump account.'}
         </p>
+
+        {isRegistering && (
+          <div className="mb-4 rounded-lg border border-gold/20 bg-gold/10 p-3 text-xs text-gray-300">
+            Tenant accounts are normally created from your unit's onboarding QR code or by JUMP staff. Only register here if staff have asked you to.
+          </div>
+        )}
 
         {isRegistering && (
           <div className="legacy-account-switch">

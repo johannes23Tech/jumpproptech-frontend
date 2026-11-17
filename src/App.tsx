@@ -2,6 +2,8 @@ import { type ReactNode, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { MARKETPLACE_ENABLED } from './config/features';
+import { hasPermission, isTenantUser } from './config/roles';
 
 // Instantly load critical UI
 import Login from './pages/Login';
@@ -26,6 +28,7 @@ const LandlordProfile = lazy(() => import('./pages/LandlordProfile'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Security = lazy(() => import('./pages/Security'));
+const Staff = lazy(() => import('./pages/Staff'));
 const Marketplace = lazy(() => import('./marketplace/Marketplace'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -37,13 +40,26 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 const OwnerRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  if (user?.role === 'tenant') return <Navigate to="/tenant-dashboard" />;
+  if (isTenantUser(user)) return <Navigate to="/tenant-dashboard" />;
+  return <>{children}</>;
+};
+
+const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'settings.manage')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const StaffRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'staff.manage')) return <Navigate to="/manage" />;
   return <>{children}</>;
 };
 
 function AppRoutes() {
   const { user } = useAuth();
-  const isTenant = user?.role === 'tenant';
+  const isTenant = isTenantUser(user);
+  const signedInHome = isTenant ? '/tenant-dashboard' : '/manage';
 
   return (
     <Suspense fallback={
@@ -52,12 +68,12 @@ function AppRoutes() {
       </div>
     }>
       <Routes>
-        <Route path="/" element={<Marketplace />} />
-        <Route path="/explore" element={<Marketplace />} />
-        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        <Route path="/" element={MARKETPLACE_ENABLED ? <Marketplace /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
+        <Route path="/explore" element={MARKETPLACE_ENABLED ? <Marketplace /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
+        <Route path="/login" element={user ? <Navigate to={signedInHome} replace /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/paywall" element={<Paywall />} />
+        <Route path="/paywall" element={MARKETPLACE_ENABLED ? <Paywall /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
         
         {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
         <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
@@ -82,9 +98,10 @@ function AppRoutes() {
         <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><OwnerRoute><SuperAdminDashboard /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
+        <Route path="/staff" element={<ProtectedRoute><StaffRoute><Staff /></StaffRoute></ProtectedRoute>} />
 
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to={user ? signedInHome : '/login'} replace />} />
       </Routes>
     </Suspense>
   );
