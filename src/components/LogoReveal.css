@@ -1,0 +1,120 @@
+.logo-reveal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  background: #ffffff;
+  color: #0a0a0a;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.logo-reveal__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.logo-reveal__mark {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  border-radius: 24px;
+  opacity: 0;
+  transform: scale(0.72) translateY(10px);
+  animation: reveal-mark 900ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
+}
+
+.logo-reveal__word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: reveal-word 800ms cubic-bezier(0.16, 1, 0.3, 1) 520ms forwards;
+}
+
+.logo-reveal__jump {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  /* Compensate for the trailing letter-space so the word stays centred. */
+  text-indent: 0.34em;
+  color: #0a0a0a;
+}
+
+.logo-reveal__sub {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.52em;
+  text-indent: 0.52em;
+  text-transform: uppercase;
+  color: #c5a059;
+}
+
+.logo-reveal__line {
+  display: block;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: #c5a059;
+  animation: reveal-line 900ms cubic-bezier(0.16, 1, 0.3, 1) 820ms forwards;
+}
+
+.logo-reveal__tag {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+  opacity: 0;
+  animation: reveal-tag 700ms ease-out 1150ms forwards;
+}
+
+@keyframes reveal-mark {
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes reveal-word {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-line {
+  to {
+    width: 72px;
+  }
+}
+
+@keyframes reveal-tag {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-reveal__mark,
+  .logo-reveal__word,
+  .logo-reveal__line,
+  .logo-reveal__tag {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .logo-reveal__line {
+    width: 72px;
+  }
+}

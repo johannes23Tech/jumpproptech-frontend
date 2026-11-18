@@ -2,14 +2,13 @@ import { type ReactNode, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
-import { MARKETPLACE_ENABLED } from './config/features';
+import LogoReveal from './components/LogoReveal';
 import { hasPermission, isTenantUser } from './config/roles';
 
 // Instantly load critical UI
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Paywall from './pages/Paywall';
 import Layout from './components/Layout';
 
 // LAZY LOAD PAGES (Code Splitting)
@@ -29,7 +28,6 @@ const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Security = lazy(() => import('./pages/Security'));
 const Staff = lazy(() => import('./pages/Staff'));
-const Marketplace = lazy(() => import('./marketplace/Marketplace'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -63,17 +61,19 @@ function AppRoutes() {
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-12 h-12 rounded-xl bg-gold animate-pulse"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <img src="/icons/icon-512.png" alt="Jump PropTech" className="w-16 h-16 rounded-2xl object-contain animate-pulse" />
       </div>
     }>
       <Routes>
-        <Route path="/" element={MARKETPLACE_ENABLED ? <Marketplace /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
-        <Route path="/explore" element={MARKETPLACE_ENABLED ? <Marketplace /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
+        {/* Entry: a single animated logo reveal, then straight into the app. */}
+        <Route path="/" element={<LogoReveal />} />
+        {/* Retired public/marketplace screens. Any old link falls back to the reveal. */}
+        <Route path="/explore" element={<Navigate to="/" replace />} />
+        <Route path="/paywall" element={<Navigate to="/" replace />} />
         <Route path="/login" element={user ? <Navigate to={signedInHome} replace /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/paywall" element={MARKETPLACE_ENABLED ? <Paywall /> : <Navigate to={user ? signedInHome : '/login'} replace />} />
         
         {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
         <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
@@ -101,7 +101,7 @@ function AppRoutes() {
         <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
         <Route path="/staff" element={<ProtectedRoute><StaffRoute><Staff /></StaffRoute></ProtectedRoute>} />
 
-        <Route path="*" element={<Navigate to={user ? signedInHome : '/login'} replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

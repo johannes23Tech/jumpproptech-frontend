@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { AlertCircle, Banknote, CheckCircle, Clock, CreditCard } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { hasPermission } from '../config/roles';
+import { Banknote, CheckCircle, CreditCard } from 'lucide-react';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 
@@ -17,14 +19,20 @@ type RentRecord = {
 };
 
 export default function Rent() {
+  const { user } = useAuth();
   const [records, setRecords] = useState<RentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<RentRecord | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('EFT');
-  const [otherMethod, setOtherMethod] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Recording cash and verifying EFT are separate permissions. Only staff who
+  // hold at least one may record a payment.
+  const canRecordCash = hasPermission(user, 'payments.record_cash');
+  const canVerifyEft = hasPermission(user, 'payments.verify_eft');
+  const canRecordPayment = canRecordCash || canVerifyEft;
 
   const fetchRent = async (): Promise<boolean> => {
     try {
@@ -47,15 +55,13 @@ export default function Rent() {
 
   const handleRecordPayment = async () => {
     if (!selectedRecord || submitting) return;
-    const method = paymentMethod === 'Other' ? otherMethod.trim() : paymentMethod;
-    if (!method) return;
+    const method = paymentMethod;
 
     setSubmitting(true);
     try {
       await api.payRent({ id: selectedRecord.id, method });
       const refreshed = await fetchRent();
       setSelectedRecord(null);
-      setOtherMethod('');
       setToast({
         message: refreshed
           ? 'Payment recorded successfully.'
@@ -141,12 +147,18 @@ export default function Rent() {
               {/* Action Button */}
               <div className="mt-6 pt-4 border-t border-gray-100">
                 {r.status !== 'Paid' ? (
-                  <button 
-                    onClick={() => { setSelectedRecord(r); setPaymentMethod('EFT'); setOtherMethod(''); }}
-                    className="w-full bg-gold text-black py-2.5 rounded-lg font-bold flex justify-center items-center gap-2 hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-                  >
-                    <CheckCircle size={16} /> Record Payment
-                  </button>
+                  canRecordPayment ? (
+                    <button
+                      onClick={() => { setSelectedRecord(r); setPaymentMethod(canVerifyEft ? 'EFT' : 'Cash'); }}
+                      className="w-full bg-gold text-black py-2.5 rounded-lg font-bold flex justify-center items-center gap-2 hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                    >
+                      <CheckCircle size={16} /> Record Payment
+                    </button>
+                  ) : (
+                    <p className="text-xs text-gray-500">
+                      Awaiting finance verification. You do not have permission to record payments.
+                    </p>
+                  )
                 ) : (
                   <div className="text-xs text-success flex items-center justify-between">
                     <span>Paid via {r.payment_method}</span>
@@ -177,10 +189,8 @@ export default function Rent() {
               <legend className="mb-2 text-sm font-bold">How was the rent paid?</legend>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { name: 'EFT', icon: CreditCard },
-                  { name: 'Cash', icon: Banknote },
-                  { name: 'SnapScan', icon: CreditCard },
-                  { name: 'Other', icon: CreditCard }
+                  ...(canVerifyEft ? [{ name: 'EFT', icon: CreditCard }] : []),
+                  ...(canRecordCash ? [{ name: 'Cash', icon: Banknote }] : []),
                 ].map(({ name, icon: Icon }) => (
                   <button
                     key={name}
@@ -199,20 +209,6 @@ export default function Rent() {
               </div>
             </fieldset>
 
-            {paymentMethod === 'Other' && (
-              <label className="block text-sm font-semibold">
-                Payment method
-                <input
-                  autoFocus
-                  value={otherMethod}
-                  onChange={(event) => setOtherMethod(event.target.value)}
-                  maxLength={60}
-                  placeholder="Enter payment method"
-                  className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
-                />
-              </label>
-            )}
-
             <p className="text-xs text-gray-500">
               Only record this after confirming the payment has been received. This action updates the tenant’s rent statement.
             </p>
@@ -228,7 +224,7 @@ export default function Rent() {
               <button
                 type="button"
                 onClick={() => void handleRecordPayment()}
-                disabled={submitting || (paymentMethod === 'Other' && !otherMethod.trim())}
+                disabled={submitting}
                 className="flex-1 rounded-xl bg-gold py-3 font-bold text-black hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? 'Recording payment…' : 'Confirm payment received'}

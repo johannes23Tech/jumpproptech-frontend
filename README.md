@@ -2,7 +2,7 @@
 
 Jump PropTech is the internal, mobile-first property-management PWA for JUMP Living's company-owned rental portfolio in South Africa. It is built with React, TypeScript, Vite, Tailwind CSS, and Lucide icons, and is deployed to Vercel.
 
-The public marketplace, landlord/agency self-registration and subscription plans that were prototyped earlier are **frozen and disabled by default**. They are not part of the approved product. Set `VITE_ENABLE_MARKETPLACE=true` only for an explicitly approved demo.
+The app opens on a white animated JUMP PROPTECH logo reveal and then routes straight to staff or tenant sign-in. The earlier public marketplace, onboarding, landlord/agency self-registration and subscription-paywall screens have been removed from the app. Their dormant source files are retained but are no longer routed or bundled.
 
 ## Run locally
 
