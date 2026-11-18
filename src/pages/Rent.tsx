@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../config/roles';
-import { AlertCircle, Banknote, CheckCircle, Clock, CreditCard, ExternalLink, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Banknote, CheckCircle, Clock, CreditCard, ExternalLink, Mail, RotateCcw, ShieldCheck } from 'lucide-react';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 
@@ -29,6 +29,7 @@ type RentRecord = {
   id: number;
   tenant_id: number;
   tenant_name: string;
+  tenant_email: string;
   unit_number: string;
   property_name: string;
   month_for: string;
@@ -90,6 +91,7 @@ export default function Rent() {
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [emailingId, setEmailingId] = useState<number | null>(null);
 
   const fetchRent = async (): Promise<boolean> => {
     try {
@@ -125,6 +127,19 @@ export default function Rent() {
       }
     });
   }, [records, filter]);
+
+  const emailReceipt = async (record: RentRecord) => {
+    if (!record.receipt_number || !record.tenant_email || emailingId !== null) return;
+    setEmailingId(record.id);
+    try {
+      await api.sendReceiptEmail({ email: record.tenant_email, receipt_number: record.receipt_number });
+      setToast({ message: `Receipt ${record.receipt_number} emailed to ${record.tenant_email}.`, type: 'success' });
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : 'Could not email the receipt.', type: 'error' });
+    } finally {
+      setEmailingId(null);
+    }
+  };
 
   const openModal = (record: RentRecord, nextMode: 'cash' | 'verify' | 'reject' | 'reverse') => {
     setSelected(record);
@@ -318,14 +333,26 @@ export default function Rent() {
                       </button>
                     </>
                   )}
-                  {status === 'Paid' && canReverse && (
-                    <button
-                      type="button"
-                      onClick={() => openModal(record, 'reverse')}
-                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                    >
-                      <RotateCcw size={14} /> Reverse
-                    </button>
+                  {status === 'Paid' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void emailReceipt(record)}
+                        disabled={emailingId === record.id || !record.tenant_email}
+                        className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        <Mail size={14} /> {emailingId === record.id ? 'Emailing...' : 'Email receipt'}
+                      </button>
+                      {canReverse && (
+                        <button
+                          type="button"
+                          onClick={() => openModal(record, 'reverse')}
+                          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                          <RotateCcw size={14} /> Reverse
+                        </button>
+                      )}
+                    </>
                   )}
                   {status !== 'Paid' && !canRecordCash && !pendingProof && (
                     <p className="text-xs text-gray-500">

@@ -16,6 +16,9 @@ export default function Tenants() {
   const [vacantUnits, setVacantUnits] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [dueDayDraft, setDueDayDraft] = useState('1');
+  const [savingDueDay, setSavingDueDay] = useState(false);
+  const [dueDayError, setDueDayError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -52,6 +55,27 @@ export default function Tenants() {
     if (selected) {
       setRent(selected.monthly_rent);
       setDeposit((selected.monthly_rent * 0.20).toFixed(0)); 
+    }
+  };
+
+  const saveDueDay = async () => {
+    if (!selectedTenant) return;
+    const day = Number(dueDayDraft);
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+      setDueDayError('Enter a day between 1 and 31.');
+      return;
+    }
+    setSavingDueDay(true);
+    setDueDayError('');
+    try {
+      await api.updateTenantRentDueDay(selectedTenant.id, day);
+      setSelectedTenant({ ...selectedTenant, rent_due_day: day });
+      setTenants((rows) => rows.map((row) => (row.id === selectedTenant.id ? { ...row, rent_due_day: day } : row)));
+      setSuccessMessage('Rent due day updated. Existing obligations keep their contractual date.');
+    } catch (err) {
+      setDueDayError(err instanceof Error ? err.message : 'Could not update the rent due day.');
+    } finally {
+      setSavingDueDay(false);
     }
   };
 
@@ -108,7 +132,7 @@ export default function Tenants() {
                   <p className="text-xs text-gray-500">Unit {t.unit_number}</p>
                 </div>
                 <button 
-                  onClick={() => setSelectedTenant(t)}
+                  onClick={() => { setSelectedTenant(t); setDueDayDraft(String(t.rent_due_day ?? 1)); setDueDayError(''); }}
                   className="bg-ivory-dark text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
                 >
                   View Details
@@ -249,6 +273,31 @@ export default function Tenants() {
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3 text-gray-500"><DollarSign size={16} /> Rent</div>
                     <span className="text-sm font-bold text-black">R {selectedTenant.monthly_rent}</span>
+                  </div>
+                  <div className="border-t border-gray-100 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 text-gray-500"><Calendar size={16} /> Rent due day</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={dueDayDraft}
+                          onChange={(event) => setDueDayDraft(event.target.value)}
+                          className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm font-bold text-black outline-none focus:border-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveDueDay()}
+                          disabled={savingDueDay}
+                          className="rounded-lg bg-black px-3 py-1.5 text-xs font-bold text-gold hover:opacity-90 disabled:opacity-50"
+                        >
+                          {savingDueDay ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                    {dueDayError && <p role="alert" className="mt-2 text-xs text-danger">{dueDayError}</p>}
+                    <p className="mt-2 text-xs text-gray-500">Applies to future rent obligations; issued obligations keep their date.</p>
                   </div>
                 </div>
               </div>

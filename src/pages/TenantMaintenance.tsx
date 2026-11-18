@@ -103,9 +103,9 @@ export default function TenantMaintenance() {
                 )}
               </div>
               
-              {m.contractor_name && (
+              {m.technician_name && (
                 <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
-                  <span className="text-gray-500">Assigned to:</span> <span className="font-bold">{m.contractor_name}</span>
+                  <span className="text-gray-500">Assigned technician:</span> <span className="font-bold">{m.technician_name}</span>
                 </div>
               )}
             </div>

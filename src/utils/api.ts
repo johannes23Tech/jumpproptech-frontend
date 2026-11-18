@@ -330,6 +330,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  updateTenantRentDueDay: async (id: number, rentDueDay: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/tenants.php`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ id, rent_due_day: rentDueDay }),
+    });
+    return handleResponse(res);
+  },
+
   // --- TENANCY LIFECYCLE ---
   getTenancies: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/tenancies.php`, { headers: getHeaders() });
@@ -545,11 +554,29 @@ export const api = {
     return handleResponse(res);
   },
 
-  resolveMaintenance: async (ticket_id: number) => {
+  assignTechnician: async (data: { ticket_id: number; technician_id?: number | null; severity?: string }) => {
     const res = await fetchWithNetworkError(`${API_URL}/maintenance.php`, {
-      method: 'POST', 
-      headers: getHeaders(), 
-      body: JSON.stringify({ ticket_id, status: 'Resolved' }) 
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'assign_technician', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  updateMaintenanceCostNotes: async (data: { ticket_id: number; actual_cost?: number | null; completion_notes?: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/maintenance.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'update_cost_notes', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  resolveMaintenance: async (ticket_id: number, completionNotes: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/maintenance.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ ticket_id, action: 'resolve', completion_notes: completionNotes }),
     });
     return handleResponse(res);
   },
@@ -573,6 +600,72 @@ export const api = {
       method: 'POST', 
       headers: getHeaders(), 
       body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+
+  approveExpense: async (expenseId: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/expenses.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'approve', expense_id: expenseId }),
+    });
+    return handleResponse(res);
+  },
+
+  rejectExpense: async (expenseId: number, reason: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/expenses.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'reject', expense_id: expenseId, reason }),
+    });
+    return handleResponse(res);
+  },
+
+  // --- SUPPLIERS ---
+  getSuppliers: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/suppliers.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  addSupplier: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/suppliers.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  deleteSupplier: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/suppliers.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'delete', id }),
+    });
+    return handleResponse(res);
+  },
+
+  // --- BUDGETS ---
+  getBudgets: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/budgets.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  addBudget: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/budgets.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  deleteBudget: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/budgets.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'delete', id }),
     });
     return handleResponse(res);
   },
