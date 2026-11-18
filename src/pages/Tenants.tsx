@@ -80,26 +80,6 @@ export default function Tenants() {
     }
   };
 
-  const handleDownloadLease = async (tenantId: number, tenantName: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`https://jumpproptech-api.onrender.com/api/generate_lease.php?tenant_id=${tenantId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to generate lease");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Lease_${tenantName}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (err) {
-      alert("Error downloading lease agreement.");
-    }
-  };
-
   return (
     <div className="animate-fade-in">
       {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
@@ -141,8 +121,8 @@ export default function Tenants() {
             </div>
             
             <div className="flex gap-2 mt-6">
-              <button onClick={() => handleDownloadLease(t.id, t.name)} className="flex-1 bg-white border border-gray-300 text-black py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors text-xs">
-                <FileText size={14} /> Lease PDF
+              <button onClick={() => navigate('/tenancy')} className="flex-1 bg-white border border-gray-300 text-black py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors text-xs">
+                <FileText size={14} /> Manage lease
               </button>
               <button onClick={() => navigate(`/messages/${t.id}`)} className="flex-1 bg-charcoal text-ivory py-2 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-black transition-colors text-xs">
                 <MessageSquare size={14} /> Message

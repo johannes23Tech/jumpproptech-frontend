@@ -47,6 +47,16 @@ export default function Layout({ children }: { children: ReactNode }) {
     ownerNav.splice(4, 0, { name: 'Applications', path: '/applications', icon: ClipboardList });
   }
 
+  // Tenancy workspace: leases, deposits and inspections.
+  if (hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) {
+    const tenancyIndex = ownerNav.findIndex((item) => item.path === '/rent');
+    ownerNav.splice(tenancyIndex === -1 ? ownerNav.length : tenancyIndex, 0, {
+      name: 'Tenancy',
+      path: '/tenancy',
+      icon: FileText,
+    });
+  }
+
   // Add Admin Portal link for super administrators.
   if (hasPermission(user, 'settings.manage')) {
     ownerNav.push({ name: 'Admin Portal', path: '/admin', icon: ShieldAlert });

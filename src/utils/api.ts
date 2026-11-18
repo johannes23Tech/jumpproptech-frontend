@@ -330,6 +330,177 @@ export const api = {
     return handleResponse(res);
   },
 
+  // --- TENANCY LIFECYCLE ---
+  getTenancies: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/tenancies.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  tenancyAction: async (data: {
+    id: number;
+    action: 'move_in' | 'notice' | 'cancel_notice' | 'end' | 'renew';
+    move_in_date?: string;
+    move_out_date?: string;
+    reason?: string;
+    start_date?: string;
+    end_date?: string;
+    monthly_rent?: number;
+    deposit_required?: number;
+    notes?: string;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/tenancies.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  // --- LEASES (versioned, management-supplied documents) ---
+  getLeases: async (params?: { tenant_id?: number; status?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.tenant_id) query.set('tenant_id', String(params.tenant_id));
+    if (params?.status) query.set('status', params.status);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php${suffix}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  createLease: async (data: {
+    tenant_id: number;
+    start_date: string;
+    end_date: string;
+    monthly_rent: number;
+    deposit_required?: number;
+    document_url?: string | null;
+    title?: string;
+    template_reference?: string;
+    notes?: string;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'create', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  updateLease: async (data: {
+    id: number;
+    start_date?: string;
+    end_date?: string;
+    monthly_rent?: number;
+    deposit_required?: number;
+    document_url?: string | null;
+    title?: string;
+    template_reference?: string;
+    notes?: string;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'update', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  signLease: async (data: {
+    id: number;
+    party: 'tenant' | 'landlord';
+    signer_name: string;
+    method?: 'in_person' | 'electronic' | 'scanned';
+    evidence_url?: string | null;
+    signed_at?: string;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'sign', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  activateLease: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'activate', id }),
+    });
+    return handleResponse(res);
+  },
+
+  deleteLease: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/leases.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'delete', id }),
+    });
+    return handleResponse(res);
+  },
+
+  // --- DEPOSITS ---
+  getDeposits: async (tenantId?: number) => {
+    const suffix = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetchWithNetworkError(`${API_URL}/deposits.php${suffix}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  recordDeposit: async (data: {
+    tenant_id: number;
+    type: 'received' | 'deduction' | 'refund' | 'adjustment';
+    amount: number;
+    method?: 'cash' | 'eft' | 'other';
+    reference?: string;
+    notes?: string;
+    lease_id?: number;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/deposits.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  // --- INSPECTIONS ---
+  getInspections: async (tenantId?: number) => {
+    const suffix = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetchWithNetworkError(`${API_URL}/inspections.php${suffix}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  createInspection: async (data: {
+    tenant_id: number;
+    type: 'move_in' | 'move_out' | 'routine';
+    inspected_at?: string;
+    notes?: string;
+    status?: 'draft' | 'completed';
+    lease_id?: number;
+    photos?: { url: string; caption?: string }[];
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/inspections.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  updateInspection: async (data: {
+    id: number;
+    notes?: string;
+    inspected_at?: string;
+    status?: 'draft' | 'completed';
+    photos?: { url: string; caption?: string }[];
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/inspections.php`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
   // --- TENANT DATA (Tenant Side) ---
   getTenantData: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/tenant_data.php`, { headers: getHeaders() });
@@ -514,6 +685,30 @@ export const api = {
     
     // Auto-compress and resize the image URL
     return secureUrl.replace('/upload/', '/upload/q_auto,f_auto,w_1000/');
+  },
+
+  // Upload a management-supplied lease document or signature evidence. Uses
+  // Cloudinary's auto endpoint so scanned PDFs and images are both accepted.
+  uploadDocument: async (file: File): Promise<string> => {
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) throw new Error('The document must be 10 MB or smaller.');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'jumpproptech_preset');
+
+    const res = await fetchWithNetworkError(
+      'https://api.cloudinary.com/v1_1/mvy6f66e/auto/upload',
+      { method: 'POST', body: formData },
+    );
+
+    if (!res.ok) throw new Error('Failed to upload the document. Please try again.');
+    const data = await res.json();
+    const secureUrl = typeof data.secure_url === 'string' ? data.secure_url : '';
+    if (!secureUrl.startsWith('https://res.cloudinary.com/')) {
+      throw new Error('Document upload returned an unexpected URL.');
+    }
+    return secureUrl;
   },
 
   // --- LOCAL STORAGE ---

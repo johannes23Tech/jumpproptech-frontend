@@ -99,6 +99,47 @@ export default function TenantDashboard() {
         </div>
       )}
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link to="/documents" className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Current lease</p>
+            <FileText size={18} className="text-gold" />
+          </div>
+          {data.lease ? (
+            <>
+              <p className="mt-2 font-display text-lg font-bold capitalize">{data.lease.status.replace(/_/g, ' ')}</p>
+              <p className="text-sm text-gray-500">
+                Version {data.lease.version} · {data.lease.start_date} to {data.lease.end_date}
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                {data.lease.document_url ? 'Document available' : 'Document pending'} ·{' '}
+                {data.lease.signatures.length} signature(s)
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">No lease issued yet.</p>
+          )}
+        </Link>
+
+        <Link to="/documents" className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Deposit</p>
+            <CreditCard size={18} className="text-gold" />
+          </div>
+          {data.deposit && (data.deposit.required > 0 || data.deposit.balance > 0) ? (
+            <>
+              <p className="mt-2 font-display text-lg font-bold">R {Number(data.deposit.balance || 0).toFixed(2)}</p>
+              <p className="text-sm capitalize text-gray-500">{data.deposit.status.replace(/_/g, ' ')}</p>
+              <p className="mt-1 text-xs text-gray-400">
+                Received R {Number(data.deposit.received || 0).toFixed(2)} of R {Number(data.deposit.required || 0).toFixed(2)}
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">No deposit recorded.</p>
+          )}
+        </Link>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link to="/documents" className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md text-center transition-shadow">
           <FileText size={28} className="mx-auto text-gold mb-2" />

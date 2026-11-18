@@ -30,6 +30,7 @@ const Security = lazy(() => import('./pages/Security'));
 const Staff = lazy(() => import('./pages/Staff'));
 const Applications = lazy(() => import('./pages/Applications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Tenancy = lazy(() => import('./pages/Tenancy'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -59,6 +60,14 @@ const StaffRoute = ({ children }: { children: ReactNode }) => {
 const ApplicationsRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   if (!hasPermission(user, 'applications.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const TenancyRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'leases.view') && !hasPermission(user, 'deposits.view')) {
+    return <Navigate to="/manage" />;
+  }
   return <>{children}</>;
 };
 
@@ -106,6 +115,7 @@ function AppRoutes() {
         <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
         <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute><OwnerRoute><ApplicationsRoute><Applications /></ApplicationsRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/tenancy" element={<ProtectedRoute><OwnerRoute><TenancyRoute><Tenancy /></TenancyRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
