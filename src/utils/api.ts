@@ -872,6 +872,76 @@ export const api = {
     return secureUrl;
   },
 
+  // --- JUMP FLUX AI ---
+  getFluxStatus: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php?action=status`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getFluxConversations: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php?action=conversations`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getFluxConversation: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php?action=conversation&id=${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  createFluxConversation: async (title?: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'conversation_create', title }),
+    });
+    return handleResponse(res);
+  },
+
+  updateFluxConversation: async (id: number, title: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'conversation_update', id, title }),
+    });
+    return handleResponse(res);
+  },
+
+  deleteFluxConversation: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'conversation_delete', id }),
+    });
+    return handleResponse(res);
+  },
+
+  clearFluxConversation: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'conversation_clear', id }),
+    });
+    return handleResponse(res);
+  },
+
+  sendFluxMessage: async (data: { conversation_id?: number | null; message: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'chat', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  captureFluxFeedback: async (data: { conversation_id?: number | null; message_id?: number | null; question?: string; assistant_response?: string; capture_type?: 'unanswered' | 'correction' | 'feedback' | 'mistake'; detail?: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/flux_ai.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'capture', ...data }),
+    });
+    return handleResponse(res);
+  },
+
   // --- CONTROL CENTER (Super Administrator) ---
   getControlCenterOverview: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/control_center/overview.php`, { headers: getHeaders() });

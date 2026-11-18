@@ -1,351 +1,614 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, MessageSquare, Bot } from 'lucide-react';
-import { isTenantUser } from '../config/roles';
+import {
+  Menu,
+  Plus,
+  Send,
+  Trash2,
+  Pencil,
+  Copy,
+  RotateCcw,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ThumbsDown,
+  AlertCircle,
+} from 'lucide-react';
 import './Messages.css';
+
+type Role = 'assistant' | 'user' | 'system';
+
+interface ChatMessage {
+  id: string | number;
+  role: Role;
+  text: string;
+  createdAt: string;
+  meta?: any;
+  pending?: boolean;
+  error?: boolean;
+}
+
+interface Conversation {
+  id: string | number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  isLocal?: boolean;
+  messages?: ChatMessage[];
+  messagesLoaded?: boolean;
+}
+
+const WELCOME_TEXT = `Welcome to JUMP FLUX AI.
+
+Your intelligent property management assistant is ready.
+
+Ask me about your properties, tenants, rental income, arrears, maintenance, expenses or portfolio performance.
+
+Let's turn your property data into better decisions.`;
+
+const SUGGESTED_PROMPTS = [
+  'How much rent did we collect this month?',
+  'Which tenants are behind on rent?',
+  'Which properties have vacancies?',
+  'What are our total monthly expenses?',
+  'Which property generates the highest rental income?',
+  'How many leases expire next month?',
+  'What maintenance cases remain unresolved?',
+  'How is the overall portfolio performing?',
+];
+
+const nowIso = () => new Date().toISOString();
+const localId = (prefix = 'local') => `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
+
+function formatTime(iso?: string) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+function formatRelative(iso?: string) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+function mapServerMessage(m: any): ChatMessage {
+  return {
+    id: m.id,
+    role: m.role === 'user' ? 'user' : 'assistant',
+    text: typeof m.content === 'string' ? m.content : String(m.text ?? ''),
+    createdAt: m.created_at || m.createdAt || nowIso(),
+    meta: m.meta || undefined,
+  };
+}
+
+function mapServerConversation(c: any): Conversation {
+  return {
+    id: c.id,
+    title: c.title || 'New conversation',
+    createdAt: c.created_at || nowIso(),
+    updatedAt: c.updated_at || c.created_at || nowIso(),
+    isLocal: false,
+    messages: [],
+    messagesLoaded: false,
+  };
+}
 
 export default function Messages() {
   const { user } = useAuth();
-  const { tenantId } = useParams(); // Gets the ID from the URL (if Landlord)
-  const navigate = useNavigate();
-  
-  const [messages, setMessages] = useState<any[]>([]);
-  const [inbox, setInbox] = useState<any[]>([]);
-  const [text, setText] = useState('');
-  const [chatData, setChatData] = useState<any>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const [activeView, setActiveView] = useState<'messages' | 'assistant'>('messages');
-  const [faqs, setFaqs] = useState<{ id: string, question: string }[]>([]);
-  const [assistantMessages, setAssistantMessages] = useState([
-    { id: 0, sender: 'assistant' as const, text: 'Hi! I’m the FAQ Assistant. I can help with rent, maintenance, leases, passwords, and property information.' },
-  ]);
-  const [assistantInput, setAssistantInput] = useState('');
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const [assistantError, setAssistantError] = useState('');
-  const assistantMessageId = useRef(1);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | number | null>(null);
+  const [input, setInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [status, setStatus] = useState<{ configured: boolean; provider?: string; model?: string | null; message?: string } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | number | null>(null);
+  const [capturedId, setCapturedId] = useState<string | number | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isTenant = isTenantUser(user);
-
-  const loadMessages = async () => {
-    try {
-      const res = await api.getMessages(tenantId ? Number(tenantId) : undefined);
-      
-      // If backend returns an inbox (Landlord with no selected tenant)
-      if (res && res.inbox) {
-        setInbox(res.inbox);
-        setChatData(null); // Reset chat
-        return;
-      }
-
-      // If backend returns chat data
-      if (res) {
-        setMessages(res.messages);
-        setChatData(res);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    loadMessages();
-    // Only poll if we are inside an active chat
-    if (isTenant || tenantId) {
-      const interval = setInterval(loadMessages, 3000); 
-      return () => clearInterval(interval);
-    }
-  }, [tenantId, isTenant]);
-
-  useEffect(() => {
-    if (activeView !== 'assistant') return;
-
-    let cancelled = false;
-    api.getFaqBotQuestions()
-      .then((res) => {
-        if (!cancelled) setFaqs(res.faqs);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setAssistantError(err instanceof Error ? err.message : 'Could not load FAQ suggestions.');
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeView]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, assistantMessages, activeView]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() || !chatData || !chatData.other_id) return;
-    
-    await api.sendMessage({ 
-      receiver_id: chatData.other_id, 
-      tenant_id: chatData.tenant_id, 
-      message: text 
-    });
-    setText('');
-    loadMessages();
-  };
-
-  const askAssistant = async (question: string) => {
-    const trimmedQuestion = question.trim();
-    if (!trimmedQuestion || assistantLoading) return;
-
-    setAssistantError('');
-    setAssistantInput('');
-    setAssistantMessages((current) => [
-      ...current,
-      { id: assistantMessageId.current++, sender: 'user', text: trimmedQuestion },
-    ]);
-    setAssistantLoading(true);
-
-    try {
-      const res = await api.askFaqBot(trimmedQuestion);
-      setAssistantMessages((current) => [
-        ...current,
-        { id: assistantMessageId.current++, sender: 'assistant', text: res.answer },
-      ]);
-    } catch (err) {
-      setAssistantError(err instanceof Error ? err.message : 'The FAQ Assistant could not respond. Please try again.');
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
-
-  const handleAssistantSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void askAssistant(assistantInput);
-  };
-
-  const viewSwitcher = (
-    <div className="flex gap-2 mb-4" role="tablist" aria-label="Messages and FAQ assistant">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeView === 'messages'}
-        onClick={() => setActiveView('messages')}
-        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold ${activeView === 'messages' ? 'bg-charcoal text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gold'}`}
-      >
-        <MessageSquare size={16} /> Messages
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeView === 'assistant'}
-        onClick={() => setActiveView('assistant')}
-        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold ${activeView === 'assistant' ? 'bg-charcoal text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gold'}`}
-      >
-        <Bot size={16} /> FAQ Assistant
-      </button>
-    </div>
+  const active = useMemo(
+    () => conversations.find((c) => String(c.id) === String(activeId)) || null,
+    [conversations, activeId]
   );
 
-  if (activeView === 'assistant') {
-    return (
-      <section className="faq-assistant" aria-labelledby="faq-assistant-title">
-        <div className="faq-assistant__media" aria-hidden="true">
-          <video
-            className="faq-assistant__video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_132328_5f9029c8-218f-4489-82b6-29ff2849920e.png"
-          >
-            <source
-              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_133255_956f653f-5d80-4b06-abd5-0f46c98b60fa.mp4"
-              type="video/mp4"
-            />
-          </video>
-        </div>
-        <div className="faq-assistant__scrim" aria-hidden="true" />
-        <div className="faq-assistant__content">
-          <nav className="faq-assistant__tabs" role="tablist" aria-label="Messages and FAQ assistant">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === 'messages'}
-              onClick={() => setActiveView('messages')}
-              className="faq-assistant__tab"
-            >
-              Messages
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === 'assistant'}
-              onClick={() => setActiveView('assistant')}
-              className="faq-assistant__tab"
-            >
-              FAQ Assistant
-            </button>
-          </nav>
+  const activeMessages = active?.messages || [];
 
-          <div className="faq-assistant__conversation">
-            <span className="faq-assistant__eyebrow">[ Property help ]</span>
-            <h2 id="faq-assistant-title" className="faq-assistant__title">FAQ Assistant</h2>
-            <p className="faq-assistant__subtitle">Quick answers about your home and account.</p>
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [st, convRes] = await Promise.all([
+          api.getFluxStatus().catch(() => null),
+          api.getFluxConversations().catch(() => ({ conversations: [] })),
+        ]);
+        if (!alive) return;
+        if (st) setStatus(st);
+        const list = Array.isArray(convRes?.conversations) ? convRes.conversations.map(mapServerConversation) : [];
+        setConversations(list);
+        if (list.length > 0) {
+          setActiveId(list[0].id);
+        } else {
+          // Start with a local draft conversation (created on first send)
+          const draft: Conversation = { id: localId('draft'), title: 'New conversation', createdAt: nowIso(), updatedAt: nowIso(), isLocal: true, messages: [], messagesLoaded: true };
+          setConversations([draft]);
+          setActiveId(draft.id);
+        }
+      } catch (e) {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : 'Could not load JUMP FLUX AI.');
+        const draft: Conversation = { id: localId('draft'), title: 'New conversation', createdAt: nowIso(), updatedAt: nowIso(), isLocal: true, messages: [], messagesLoaded: true };
+        setConversations([draft]);
+        setActiveId(draft.id);
+      } finally {
+        if (alive) setInitialLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
-            <div className="faq-assistant__log" aria-live="polite" aria-label="Chat conversation">
-            {assistantMessages.map((message) => {
-              const isUser = message.sender === 'user';
-              return (
-                <div key={message.id} className={`faq-assistant__message ${isUser ? 'faq-assistant__message--user' : ''}`}>
-                    {message.text}
-                </div>
-              );
-            })}
-            {assistantLoading && <p className="faq-assistant__thinking">Assistant is thinking…</p>}
-            {assistantError && <p className="faq-assistant__error" role="alert">{assistantError}</p>}
-            <div ref={bottomRef} />
-          </div>
+  // Load messages when selecting a server conversation
+  useEffect(() => {
+    if (!active || active.isLocal || active.messagesLoaded) return;
+    let alive = true;
+    (async () => {
+      try {
+        const res = await api.getFluxConversation(Number(active.id));
+        if (!alive) return;
+        const msgs = Array.isArray(res?.messages) ? res.messages.map(mapServerMessage) : [];
+        setConversations((prev) => prev.map((c) => String(c.id) === String(active.id) ? { ...c, messages: msgs, messagesLoaded: true, title: res?.conversation?.title || c.title, updatedAt: res?.conversation?.updated_at || c.updatedAt } : c));
+      } catch (e) {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : 'Could not load conversation.');
+      }
+    })();
+    return () => { alive = false; };
+  }, [activeId]);
 
-          {faqs.length > 0 && (
-            <div className="faq-assistant__suggestions" aria-label="Suggested questions">
-              {faqs.map((faq) => (
-                <button
-                  key={faq.id}
-                  type="button"
-                  disabled={assistantLoading}
-                  onClick={() => void askAssistant(faq.question)}
-                  className="faq-assistant__suggestion"
-                >
-                  {faq.question}
-                </button>
-              ))}
-            </div>
-          )}
+  useEffect(() => {
+    if (!listRef.current) return;
+    listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [activeMessages.length, isProcessing, activeId]);
 
-          <form onSubmit={handleAssistantSubmit} className="faq-assistant__form">
-            <input
-              type="text"
-              value={assistantInput}
-              onChange={(e) => setAssistantInput(e.target.value)}
-              maxLength={500}
-              placeholder="Ask a question..."
-              aria-label="Ask the FAQ Assistant a question"
-              className="faq-assistant__input"
-            />
-            <button
-              type="submit"
-              disabled={!assistantInput.trim() || assistantLoading}
-              aria-label="Send question"
-              className="faq-assistant__send"
-            >
-              <Send size={20} />
-            </button>
-          </form>
-        </div>
+  const upsertConversation = (conv: Conversation) => {
+    setConversations((prev) => {
+      const idx = prev.findIndex((c) => String(c.id) === String(conv.id));
+      if (idx === -1) return [conv, ...prev];
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...conv };
+      // move updated to top
+      const [item] = next.splice(idx, 1);
+      return [item, ...next];
+    });
+  };
+
+  const startNewConversation = () => {
+    const draft: Conversation = { id: localId('draft'), title: 'New conversation', createdAt: nowIso(), updatedAt: nowIso(), isLocal: true, messages: [], messagesLoaded: true };
+    setConversations((prev) => [draft, ...prev.filter((c) => !(c.isLocal && (c.messages?.length || 0) === 0))]);
+    setActiveId(draft.id);
+    setInput('');
+    setError('');
+    setNotice('');
+    setSidebarOpen(false);
+  };
+
+  const deleteConversation = async (conv: Conversation) => {
+    if (!window.confirm(`Delete "${conv.title}"? This cannot be undone.`)) return;
+    setError('');
+    try {
+      if (!conv.isLocal) {
+        await api.deleteFluxConversation(Number(conv.id));
+      }
+      setConversations((prev) => {
+        const next = prev.filter((c) => String(c.id) !== String(conv.id));
+        if (next.length === 0) {
+          const draft: Conversation = { id: localId('draft'), title: 'New conversation', createdAt: nowIso(), updatedAt: nowIso(), isLocal: true, messages: [], messagesLoaded: true };
+          setActiveId(draft.id);
+          return [draft];
+        }
+        if (String(activeId) === String(conv.id)) setActiveId(next[0].id);
+        return next;
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete conversation.');
+    }
+  };
+
+  const renameConversation = async (conv: Conversation) => {
+    const nextTitle = window.prompt('Rename conversation', conv.title);
+    if (nextTitle === null) return;
+    const trimmed = nextTitle.trim();
+    if (!trimmed) return;
+    setError('');
+    try {
+      if (conv.isLocal) {
+        setConversations((prev) => prev.map((c) => String(c.id) === String(conv.id) ? { ...c, title: trimmed } : c));
+      } else {
+        const res = await api.updateFluxConversation(Number(conv.id), trimmed);
+        const updated = res?.conversation ? mapServerConversation(res.conversation) : null;
+        setConversations((prev) => prev.map((c) => String(c.id) === String(conv.id) ? { ...c, title: updated?.title || trimmed, updatedAt: updated?.updatedAt || nowIso() } : c));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not rename conversation.');
+    }
+  };
+
+  const clearConversation = async () => {
+    if (!active) return;
+    if (!window.confirm('Clear all messages in this conversation?')) return;
+    setError('');
+    try {
+      if (!active.isLocal) {
+        await api.clearFluxConversation(Number(active.id));
+      }
+      setConversations((prev) => prev.map((c) => String(c.id) === String(active.id) ? { ...c, messages: [], messagesLoaded: true, updatedAt: nowIso() } : c));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not clear conversation.');
+    }
+  };
+
+  const copyMessage = async (msg: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(msg.text);
+      setCopiedId(msg.id);
+      window.setTimeout(() => setCopiedId((current) => (current === msg.id ? null : current)), 1500);
+    } catch {
+      setError('Could not copy to clipboard.');
+    }
+  };
+
+  const captureFeedback = async (msg: ChatMessage, question?: string) => {
+    if (!active || msg.role !== 'assistant') return;
+    try {
+      await api.captureFluxFeedback({
+        conversation_id: active.isLocal ? null : Number(active.id),
+        message_id: typeof msg.id === 'number' ? msg.id : null,
+        question,
+        assistant_response: msg.text,
+        capture_type: 'mistake',
+        detail: 'user_flagged_issue',
+      });
+      setCapturedId(msg.id);
+      setNotice('Thanks — this response was flagged for review to help improve JUMP FLUX AI.');
+      window.setTimeout(() => setCapturedId((current) => (current === msg.id ? null : current)), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not submit feedback.');
+    }
+  };
+
+  const sendMessage = async (raw: string) => {
+    const question = raw.trim();
+    if (!question || !active || isProcessing) return;
+    setError('');
+    setNotice('');
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    const tempUser: ChatMessage = { id: localId('msg_u'), role: 'user', text: question, createdAt: nowIso(), pending: true };
+    const currentMessages = active.messages || [];
+    const isFirst = currentMessages.every((m) => m.role !== 'user');
+
+    // optimistic append
+    setConversations((prev) => prev.map((c) => String(c.id) === String(active.id) ? {
+      ...c,
+      title: c.isLocal && isFirst ? (question.slice(0, 42) + (question.length > 42 ? '…' : '')) : c.title,
+      updatedAt: nowIso(),
+      messages: [...currentMessages, tempUser],
+      messagesLoaded: true,
+    } : c));
+
+    setIsProcessing(true);
+    try {
+      const res = await api.sendFluxMessage({
+        conversation_id: active.isLocal ? null : Number(active.id),
+        message: question,
+      });
+
+      const serverConv = res?.conversation ? mapServerConversation(res.conversation) : null;
+      const userMsg = res?.user_message ? mapServerMessage(res.user_message) : tempUser;
+      const assistantMsg = res?.assistant_message ? mapServerMessage(res.assistant_message) : null;
+      if (typeof res?.configured === 'boolean') {
+        setStatus((prev) => ({ ...(prev || {}), configured: res.configured, message: res.configured ? (prev?.message || 'JUMP FLUX AI is ready.') : (prev?.message || 'AI provider not configured.') }));
+      }
+
+      setConversations((prev) => {
+        // Replace local/draft conversation with real one if needed
+        const withoutDraft = prev.filter((c) => !(String(c.id) === String(active.id) && active.isLocal && serverConv));
+        const targetId = serverConv ? serverConv.id : active.id;
+        const baseList = withoutDraft.some((c) => String(c.id) === String(targetId)) ? withoutDraft : [serverConv || active, ...withoutDraft];
+        return baseList.map((c) => {
+          if (String(c.id) !== String(targetId)) return c;
+          const msgs = (c.messages || []).filter((m) => String(m.id) !== String(tempUser.id));
+          // if this was the draft being replaced, msgs came from draft state in closure? ensure we use current active messages snapshot
+          const baseMsgs = (String(c.id) === String(active.id) ? (c.messages || []) : (c.messages || [])).filter((m) => String(m.id) !== String(tempUser.id));
+          const merged = [...baseMsgs, userMsg, ...(assistantMsg ? [assistantMsg] : [])];
+          return {
+            ...c,
+            id: targetId,
+            isLocal: false,
+            title: serverConv?.title || c.title,
+            updatedAt: serverConv?.updatedAt || nowIso(),
+            createdAt: serverConv?.createdAt || c.createdAt,
+            messages: merged,
+            messagesLoaded: true,
+          };
+        }).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+      });
+
+      if (serverConv) setActiveId(serverConv.id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not send message. Please try again.';
+      setError(msg);
+      // mark optimistic message as error-like by keeping it but appending an assistant error note
+      setConversations((prev) => prev.map((c) => String(c.id) === String(active.id) ? {
+        ...c,
+        messages: [...(c.messages || []).filter((m) => String(m.id) !== String(tempUser.id)), { ...tempUser, pending: false }, { id: localId('msg_err'), role: 'assistant', text: msg, createdAt: nowIso(), error: true }],
+      } : c));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const regenerateLast = async () => {
+    if (!active || isProcessing) return;
+    const msgs = active.messages || [];
+    // find last user message
+    let lastUser: ChatMessage | null = null;
+    for (let i = msgs.length - 1; i >= 0; i -= 1) {
+      if (msgs[i].role === 'user') { lastUser = msgs[i]; break; }
+    }
+    if (!lastUser) return;
+    await sendMessage(lastUser.text);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void sendMessage(input);
+  };
+
+  const onInputChange = (val: string) => {
+    setInput(val);
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    }
+  };
+
+  const showWelcome = !active || (active.messages || []).length === 0;
+  const configured = status?.configured !== false; // default to true-ish until known; but status may be null
+  const statusKnown = status !== null;
+
+  return (
+    <section className={`flux-ai ${isProcessing ? 'is-processing' : ''}`} aria-label="JUMP FLUX AI">
+      <div className="flux-ai__media" aria-hidden="true">
+        <video
+          className="flux-ai__video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.jpg"
+        >
+          <source
+            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
+            type="video/mp4"
+          />
+        </video>
       </div>
-      </section>
-    );
-  }
+      <div className="flux-ai__scrim" aria-hidden="true" />
+      <div className="flux-ai__energy" aria-hidden="true" />
 
-  // ==========================================
-  // VIEW 1: LANDLORD INBOX (No tenantId selected)
-  // ==========================================
-  if (!isTenant && !tenantId) {
-    return (
-      <div>
-        {viewSwitcher}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-display text-xl font-bold mb-4">Message Inbox</h2>
-        <p className="text-xs text-gray-500 mb-6">Select a tenant to open a secure chat channel.</p>
+      <div className="flux-ai__shell">
+        <div
+          className={`flux-sidebar-overlay ${sidebarOpen ? 'is-open' : ''}`}
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
 
-        {inbox.length === 0 ? (
-          <div className="text-center py-10 text-gray-500">
-            <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
-            <p>No tenants available to message.</p>
+        <aside
+          className={`flux-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-collapsed' : ''}`}
+          aria-label="Conversation history"
+        >
+          <div className="flux-sidebar__header">
+            <div className="flux-brand">
+              <div className="flux-brand__mark" aria-hidden="true">F</div>
+              <div>
+                <div className="flux-brand__name">JUMP FLUX AI</div>
+                <div className="flux-brand__sub">Jump PropTech</div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {inbox.map(t => (
-              <div 
-                key={t.id} 
-                onClick={() => navigate(`/messages/${t.id}`)}
-                className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-gold hover:shadow-md transition-all bg-ivory-dark"
+
+          <div className="flux-sidebar__actions">
+            <button type="button" className="flux-btn flux-btn--primary" onClick={startNewConversation}>
+              <Plus size={16} /> New conversation
+            </button>
+          </div>
+
+          <div className="flux-sidebar__list" role="list">
+            {conversations.map((conv) => (
+              <div
+                key={String(conv.id)}
+                role="button"
+                tabIndex={0}
+                className={`flux-convo ${String(conv.id) === String(activeId) ? 'is-active' : ''}`}
+                onClick={() => { setActiveId(conv.id); setSidebarOpen(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveId(conv.id); setSidebarOpen(false); } }}
               >
-                <div className="w-12 h-12 rounded-full bg-charcoal text-gold flex items-center justify-center font-bold text-lg">
-                  {t.name.charAt(0)}
+                <div className="flux-convo__main">
+                  <div className="flux-convo__title">{conv.title || 'New conversation'}</div>
+                  <div className="flux-convo__meta">{conv.isLocal ? 'Draft' : formatRelative(conv.updatedAt || conv.createdAt)}</div>
                 </div>
-                <div>
-                  <p className="font-bold text-black">{t.name}</p>
-                  <p className="text-xs text-gray-500">Unit {t.unit_number}</p>
+                <div className="flux-convo__actions" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="flux-btn--ghost" title="Rename" onClick={() => void renameConversation(conv)}>
+                    <Pencil size={14} />
+                  </button>
+                  <button type="button" className="flux-btn--ghost" title="Delete" onClick={() => void deleteConversation(conv)}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
-        )}
-        </div>
-      </div>
-    );
-  }
 
-  // ==========================================
-  // VIEW 2: ACTIVE CHAT (Tenant or Landlord)
-  // ==========================================
-  if (!chatData) return <div className="p-8 text-center text-gray-500">Loading chat...</div>;
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      {viewSwitcher}
-      {/* Back button for Landlord to return to inbox */}
-      {!isTenant && (
-        <button onClick={() => navigate('/messages')} className="inline-flex items-center gap-2 text-gold font-bold mb-4 hover:underline">
-          <ArrowLeft size={16} /> Back to Inbox
-        </button>
-      )}
-
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-[75vh]">
-        <div className="p-4 border-b border-gray-200 bg-ivory rounded-t-2xl flex justify-between items-center">
-          <div>
-            <h2 className="font-display text-xl font-bold">{chatData.chat_title}</h2>
-            <p className="text-xs text-gray-500">Secure chat channel</p>
+          <div className="flux-sidebar__footer">
+            <div><strong>Intelligence in Motion.</strong></div>
+            <div>Signed in as {user?.full_name || 'user'}. Conversations are saved to your account.</div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center font-bold text-black">
-            {chatData.chat_title?.charAt(0) || 'U'}
-          </div>
-        </div>
-        
-        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
-          {messages.length === 0 && <p className="text-center text-gray-400 text-sm mt-10">No messages yet. Say hello!</p>}
-          
-          {messages.map((m) => {
-            const isMe = m.sender_id === chatData.my_id;
-            return (
-              <div key={m.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                {!isMe && <div className="w-8 h-8 rounded-full bg-charcoal text-white flex items-center justify-center text-xs font-bold shrink-0">U</div>}
-                <div className={`p-3 rounded-2xl shadow-sm max-w-[80%] text-sm ${isMe ? 'bg-gold text-black rounded-tr-none font-medium' : 'bg-white border border-gray-200 rounded-tl-none text-gray-800'}`}>
-                  {m.message}
-                  <div className={`text-[10px] mt-1 ${isMe ? 'text-gray-700' : 'text-gray-400'}`}>
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </aside>
+
+        <main className="flux-main">
+          <header className="flux-main__header">
+            <div className="flux-main__identity">
+              <button type="button" className="flux-btn flux-btn--icon flux-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open conversations">
+                <Menu size={18} />
+              </button>
+              <div className="flux-orb" aria-hidden="true">
+                <div className="flux-orb__core" />
+                <div className="flux-orb__ring" />
+                <div className="flux-orb__ring2" />
+              </div>
+              <div>
+                <div className="flux-main__title">JUMP FLUX AI</div>
+                <div className="flux-main__tagline">Intelligence in Motion</div>
+              </div>
+            </div>
+            <div className="flux-main__status">
+              <span className="flux-pill"><span className="flux-dot" /> {statusKnown ? (configured ? 'Ready' : 'Setup required') : 'Connecting'}</span>
+              <button type="button" className="flux-btn flux-btn--icon" title="Clear conversation" onClick={() => void clearConversation()} disabled={!active || (active.messages || []).length === 0 || isProcessing}>
+                <MessageSquare size={16} />
+              </button>
+              <button
+                type="button"
+                className="flux-btn flux-btn--icon"
+                title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+                onClick={() => setSidebarCollapsed((v) => !v)}
+              >
+                {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+              </button>
+            </div>
+          </header>
+
+          <div className="flux-main__body">
+            <div className="flux-messages" ref={listRef} aria-live="polite" aria-label="Chat messages">
+              {initialLoading ? (
+                <div className="flux-notice">Loading JUMP FLUX AI…</div>
+              ) : showWelcome ? (
+                <div className="flux-welcome">
+                  <div className="flux-welcome__eyebrow">AI Property Management Assistant · Jump PropTech</div>
+                  <h1 className="flux-welcome__title">Intelligence in Motion</h1>
+                  <p className="flux-welcome__text">{WELCOME_TEXT}</p>
+                </div>
+              ) : (
+                (active?.messages || []).map((msg, idx, arr) => {
+                  const isUser = msg.role === 'user';
+                  const isLastAssistant = msg.role === 'assistant' && idx === arr.length - 1;
+                  const prevUser = [...arr].slice(0, idx).reverse().find((m) => m.role === 'user');
+                  return (
+                    <div key={String(msg.id)} className={`flux-msg-row ${isUser ? 'flux-msg-row--user' : 'flux-msg-row--assistant'}`}>
+                      <div className={`flux-avatar ${isUser ? 'flux-avatar--user' : 'flux-avatar--ai'}`} aria-hidden="true">
+                        {isUser ? (user?.full_name?.charAt(0) || 'U') : 'F'}
+                      </div>
+                      <div className="flux-bubble-wrap">
+                        <div className="flux-bubble">{msg.text}</div>
+                        <div className="flux-msg-meta">
+                          <span>{formatTime(msg.createdAt)}</span>
+                          {!isUser && (
+                            <span className="flux-msg-actions">
+                              <button type="button" className="flux-mini-btn" onClick={() => void copyMessage(msg)} title="Copy response">
+                                <Copy size={12} /> {copiedId === msg.id ? 'Copied' : 'Copy'}
+                              </button>
+                              {isLastAssistant && (
+                                <button type="button" className="flux-mini-btn" onClick={() => void regenerateLast()} disabled={isProcessing} title="Ask again">
+                                  <RotateCcw size={12} /> Ask again
+                                </button>
+                              )}
+                              <button type="button" className="flux-mini-btn" onClick={() => void captureFeedback(msg, prevUser?.text)} title="Flag response for review (learn from mistake)">
+                                <ThumbsDown size={12} /> {capturedId === msg.id ? 'Flagged' : 'Flag'}
+                              </button>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+
+              {isProcessing && (
+                <div className="flux-msg-row flux-msg-row--assistant">
+                  <div className="flux-avatar flux-avatar--ai" aria-hidden="true">F</div>
+                  <div className="flux-bubble-wrap">
+                    <div className="flux-typing" aria-label="JUMP FLUX AI is thinking">
+                      <span /><span /><span />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
+              )}
+            </div>
 
-        <form onSubmit={handleSend} className="p-4 border-t border-gray-200 bg-white rounded-b-2xl flex gap-2">
-          <input 
-            type="text" 
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Type a message..." 
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-gold" 
-          />
-          <button type="submit" className="bg-gold text-black p-3 rounded-lg hover:opacity-90 transition-opacity"><Send size={20} /></button>
-        </form>
+            {error && <div className="flux-notice flux-notice--error" role="alert"><AlertCircle size={14} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />{error}</div>}
+            {notice && <div className="flux-notice" role="status">{notice}</div>}
+
+            {statusKnown && !status?.configured && (
+              <div className="flux-notice" role="note">
+                <strong>Setup required:</strong> {status?.message || 'Configure FLUX_AI_PROVIDER, FLUX_AI_API_KEY and FLUX_AI_MODEL on the server to enable live, data-aware responses.'} The chat interface and conversation history remain available.
+              </div>
+            )}
+
+            <div className="flux-notice" role="note">
+              JUMP FLUX AI uses authorized Jump PropTech data within your role permissions. It distinguishes actual records, calculations, and suggestions, and will not take actions that change records or send communications without your explicit confirmation. General South African property information is not legal or tax advice.
+            </div>
+
+            <div className="flux-suggestions" aria-label="Suggested prompts">
+              {SUGGESTED_PROMPTS.map((q) => (
+                <button key={q} type="button" className="flux-chip" disabled={isProcessing || initialLoading} onClick={() => void sendMessage(q)}>
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            <form className="flux-composer" onSubmit={handleSubmit}>
+              <div className="flux-composer__row">
+                <textarea
+                  ref={textareaRef}
+                  className="flux-input"
+                  rows={1}
+                  value={input}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendMessage(input);
+                    }
+                  }}
+                  placeholder="Ask JUMP FLUX AI about properties, tenants, rent, arrears, maintenance, expenses…"
+                  aria-label="Message JUMP FLUX AI"
+                  disabled={isProcessing || initialLoading}
+                />
+                <button type="submit" className="flux-send" disabled={!input.trim() || isProcessing || initialLoading} aria-label="Send message">
+                  <Send size={18} />
+                </button>
+              </div>
+              <div className="flux-composer__hint">Enter to send · Shift+Enter for a new line · Responses respect authorized access</div>
+            </form>
+          </div>
+        </main>
       </div>
-    </div>
+    </section>
   );
 }
