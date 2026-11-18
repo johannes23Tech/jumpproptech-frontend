@@ -28,6 +28,8 @@ const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Security = lazy(() => import('./pages/Security'));
 const Staff = lazy(() => import('./pages/Staff'));
+const Applications = lazy(() => import('./pages/Applications'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -54,6 +56,12 @@ const StaffRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const ApplicationsRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'applications.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
 function AppRoutes() {
   const { user } = useAuth();
   const isTenant = isTenantUser(user);
@@ -74,6 +82,8 @@ function AppRoutes() {
         <Route path="/login" element={user ? <Navigate to={signedInHome} replace /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Public, unit-scoped QR onboarding. Never requires a session. */}
+        <Route path="/apply/:token" element={<Onboarding />} />
         
         {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
         <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
@@ -95,6 +105,7 @@ function AppRoutes() {
         <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
         <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
         <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/applications" element={<ProtectedRoute><OwnerRoute><ApplicationsRoute><Applications /></ApplicationsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />

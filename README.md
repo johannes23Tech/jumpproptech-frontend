@@ -12,18 +12,18 @@ npm run dev
 npm run build
 ```
 
-The local Vite server proxies `/api` to the Jump PropTech API. Production uses the configured API host. The default entry point is secure staff/tenant sign-in; signed-in tenants go to the tenant portal and staff go to the management dashboard. Public marketplace screens are not reachable unless `VITE_ENABLE_MARKETPLACE=true` is set.
+The local Vite server proxies `/api` to the Jump PropTech API. Production uses the configured API host. The default entry point is secure staff/tenant sign-in; signed-in tenants go to the tenant portal and staff go to the management dashboard. Unit QR links open the public application page at `/apply/:token`; these links are created by staff in the Units screen and are unrelated to the retired marketplace.
 
 ## App structure
 
-- `src/marketplace/Marketplace.tsx` — marketplace screens, navigation, local demo actions, and auth entry points.
-- `src/marketplace/data.ts` — illustrative Cape Town and Stellenbosch listings and ZAR formatting.
-- `src/marketplace/marketplace.css` — reusable marketplace components and responsive layouts for the dark luxury theme.
+- `src/App.tsx` — route table, including the public `/apply/:token` onboarding page and the protected `/manage` dashboard.
+- `src/pages/Onboarding.tsx` — public, unit-scoped QR application form.
+- `src/pages/Applications.tsx` — staff review and approval of onboarding applications.
+- `src/pages/Units.tsx` — unit register, building selection, prepaid meter, archiving and QR generation/revocation.
 - `src/theme.css` — shared luxury black-and-gold design tokens.
 - `src/components/AnimatedAuthBackground.tsx` and `animated-auth-background.css` — reusable login/sign-up-only wave backdrop and motion.
 - `public/icons/icon-512.png` — supplied Jump JL logo used in the intro, reveal, and account screens.
-- `src/App.tsx` — public marketplace routes and existing protected management routes. The legacy dashboard is at `/manage`.
-- `docs/marketplace-ux.md` — research assumptions, personas, stories, sitemap, flows, low-fidelity wireframes, and user-testing plan.
+- `src/marketplace/*` — dormant marketplace source retained for history only; not routed or bundled.
 
 ## Design and content
 

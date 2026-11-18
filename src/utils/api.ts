@@ -223,6 +223,98 @@ export const api = {
     return handleResponse(res);
   },
 
+  updateUnit: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/units.php`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  // --- BUILDINGS ---
+  getBuildings: async (propertyId?: number) => {
+    const url = propertyId ? `${API_URL}/buildings.php?property_id=${propertyId}` : `${API_URL}/buildings.php`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  createBuilding: async (data: { property_id: number; name: string; address?: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/buildings.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  // --- QR ONBOARDING (staff) ---
+  getUnitQrTokens: async (unitId?: number) => {
+    const url = unitId ? `${API_URL}/qr_tokens.php?unit_id=${unitId}` : `${API_URL}/qr_tokens.php`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  generateUnitQr: async (data: { unit_id: number; expires_in_days?: number }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/qr_tokens.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  revokeUnitQr: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/qr_tokens.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'revoke', id }),
+    });
+    return handleResponse(res);
+  },
+
+  // --- TENANT APPLICATIONS (staff) ---
+  getApplications: async (status?: string) => {
+    const url = status ? `${API_URL}/applications.php?status=${encodeURIComponent(status)}` : `${API_URL}/applications.php`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  reviewApplication: async (data: {
+    id: number;
+    action: 'review' | 'reject' | 'approve';
+    rejection_reason?: string;
+    lease_start?: string;
+    lease_end?: string;
+    deposit?: number;
+    monthly_rent?: number;
+  }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/applications.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  // --- PUBLIC QR ONBOARDING (no session) ---
+  lookupOnboardingToken: async (token: string) => {
+    const res = await fetchWithNetworkError(
+      `${API_URL}/public/onboarding.php?token=${encodeURIComponent(token)}`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    return handleResponse(res);
+  },
+
+  submitTenantApplication: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/public/onboarding.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
   // --- TENANTS ---
   getTenants: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/tenants.php`, { headers: getHeaders() });

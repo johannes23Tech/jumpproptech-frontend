@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
   FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
-  Download, ShieldAlert, ShieldCheck, MoreHorizontal
+  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
@@ -41,6 +41,11 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Messages', path: '/messages', icon: MessageSquare },
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
+
+  // QR onboarding applications are visible to staff with review/read access.
+  if (hasPermission(user, 'applications.view')) {
+    ownerNav.splice(4, 0, { name: 'Applications', path: '/applications', icon: ClipboardList });
+  }
 
   // Add Admin Portal link for super administrators.
   if (hasPermission(user, 'settings.manage')) {

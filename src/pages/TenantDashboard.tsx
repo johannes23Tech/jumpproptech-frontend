@@ -79,7 +79,14 @@ export default function TenantDashboard() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-gold opacity-10 rounded-full -mr-10 -mt-10"></div>
         <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">My Home</p>
         <p className="font-display text-3xl font-semibold text-gold-light mb-2">{tenant.property_name || 'Pending Assignment'}</p>
-        <p className="text-sm text-gray-300">Unit: <span className="font-bold text-white">{tenant.unit_number || 'N/A'}</span> | Rent: <span className="font-bold text-white">R {tenant.monthly_rent || 0}</span></p>
+        <p className="text-sm text-gray-300">
+          {tenant.building_name ? `${tenant.building_name} · ` : ''}Unit: <span className="font-bold text-white">{tenant.unit_number || 'N/A'}</span> | Rent: <span className="font-bold text-white">R {tenant.monthly_rent || 0}</span>
+        </p>
+        {tenant.prepaid_meter_number && (
+          <p className="mt-2 text-xs text-gray-400">
+            Prepaid electricity meter: <span className="font-semibold text-gold-light">{tenant.prepaid_meter_number}</span>. You buy your own tokens; water is included in rent.
+          </p>
+        )}
       </div>
 
       {pendingRent && (
