@@ -30,6 +30,7 @@ export default function Tenants() {
   const [leaseEnd, setLeaseEnd] = useState('');
   const [deposit, setDeposit] = useState('');
   const [rent, setRent] = useState(0);
+  const [rentDueDay, setRentDueDay] = useState('1');
 
   const fetchData = async () => {
     try {
@@ -67,10 +68,11 @@ export default function Tenants() {
       await api.createTenant({
         unit_id: Number(unitId), name, phone, email, password,
         lease_start: leaseStart, lease_end: leaseEnd,
-        deposit: deposit ? Number(deposit) : 0, monthly_rent: rent
+        deposit: deposit ? Number(deposit) : 0, monthly_rent: rent,
+        rent_due_day: Number(rentDueDay) || 1,
       });
       setIsModalOpen(false);
-      setName(''); setPhone(''); setEmail(''); setPassword(''); setLeaseStart(''); setLeaseEnd('');
+      setName(''); setPhone(''); setEmail(''); setPassword(''); setLeaseStart(''); setLeaseEnd(''); setRentDueDay('1');
       setSuccessMessage('Tenant added successfully.');
       await fetchData();
     } catch (err) {
@@ -280,6 +282,20 @@ export default function Tenants() {
               <p className="text-xs text-gray-500 uppercase font-bold mb-1">Deposit (20%)</p>
               <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="w-24 border-b border-gray-300 bg-transparent font-bold text-lg text-black focus:outline-none focus:border-gold text-right" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Rent Due Day</label>
+            <input
+              type="number"
+              min={1}
+              max={31}
+              required
+              value={rentDueDay}
+              onChange={(e) => setRentDueDay(e.target.value)}
+              className="w-full bg-white border border-gray-300 rounded-xl p-3.5 text-sm focus:border-gold outline-none"
+            />
+            <p className="mt-1 text-xs text-gray-500">Individual contractual day of the month (clamped to shorter months).</p>
           </div>
 
           <div>

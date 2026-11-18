@@ -51,11 +51,11 @@ const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptProps>(({ record, land
             <td className="py-3">
               Monthly Rent for {record.month_for}
             </td>
-            <td className="py-3 text-right">R {record.amount}.00</td>
+            <td className="py-3 text-right">R {Number(record.amount).toFixed(2)}</td>
           </tr>
           <tr className="border-b border-gray-200">
             <td className="py-3 text-right font-bold">Total Paid</td>
-            <td className="py-3 text-right font-bold">R {record.amount}.00</td>
+            <td className="py-3 text-right font-bold">R {Number(record.amount).toFixed(2)}</td>
           </tr>
         </tbody>
       </table>

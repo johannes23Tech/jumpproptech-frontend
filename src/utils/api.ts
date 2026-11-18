@@ -583,11 +583,70 @@ export const api = {
     return handleResponse(res);
   },
 
+  getArrears: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php?view=arrears`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
   payRent: async (data: any) => {
     const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
       method: 'POST', 
       headers: getHeaders(), 
       body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+
+  recordCashPayment: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'record_cash', id }),
+    });
+    return handleResponse(res);
+  },
+
+  submitEftProof: async (data: { id: number; proof_url: string; reference?: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'submit_eft', ...data }),
+    });
+    return handleResponse(res);
+  },
+
+  verifyEftPayment: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'verify_eft', id }),
+    });
+    return handleResponse(res);
+  },
+
+  rejectEftPayment: async (id: number, reason: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'reject_eft', id, reason }),
+    });
+    return handleResponse(res);
+  },
+
+  reverseRentPayment: async (id: number, reason: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'reverse', id, reason }),
+    });
+    return handleResponse(res);
+  },
+
+  generateRentObligations: async (tenantId: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/rent.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'generate', tenant_id: tenantId }),
     });
     return handleResponse(res);
   },
