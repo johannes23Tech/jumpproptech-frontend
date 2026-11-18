@@ -88,8 +88,12 @@ export default function Properties() {
                 <span className="text-[10px] uppercase font-bold bg-gold/10 text-gold px-2 py-1 rounded-full">{p.property_type}</span>
               </div>
               <p className="text-sm text-gray-500 flex items-center gap-1">
-                <MapPin size={14} /> {p.address}, {p.suburb}
+                <MapPin size={14} />
+                <span>
+                  {[p.address, p.suburb, p.city].filter(Boolean).join(', ') || 'No address details'}
+                </span>
               </p>
+              {p.description && <p className="text-xs text-gray-400 mt-2 line-clamp-2">{p.description}</p>}
             </div>
           ))}
         </div>
