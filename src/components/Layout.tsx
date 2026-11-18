@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
   FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
-  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList
+  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList, DollarSign
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
@@ -54,6 +54,16 @@ export default function Layout({ children }: { children: ReactNode }) {
       name: 'Tenancy',
       path: '/tenancy',
       icon: FileText,
+    });
+  }
+
+  // Budgets are visible to staff with budget read access.
+  if (hasPermission(user, 'budgets.view')) {
+    const maintenanceIndex = ownerNav.findIndex((item) => item.path === '/maintenance');
+    ownerNav.splice(maintenanceIndex === -1 ? ownerNav.length : maintenanceIndex + 1, 0, {
+      name: 'Budgets',
+      path: '/budgets',
+      icon: DollarSign,
     });
   }
 

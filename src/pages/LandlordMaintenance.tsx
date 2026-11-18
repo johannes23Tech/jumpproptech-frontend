@@ -41,6 +41,9 @@ type Expense = {
   approval_status: 'pending' | 'approved' | 'rejected';
   approved_by_name: string | null;
   approved_at: string | null;
+  reversed_by_name: string | null;
+  reversed_at: string | null;
+  reversal_reason: string | null;
   attachment_url: string | null;
 };
 
@@ -67,6 +70,15 @@ export default function LandlordMaintenance() {
   const [expAmount, setExpAmount] = useState('');
   const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10));
   const [expDesc, setExpDesc] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentError, setAttachmentError] = useState('');
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+
+  // Expense reversal
+  const [isReverseModalOpen, setIsReverseModalOpen] = useState(false);
+  const [reverseExpenseId, setReverseExpenseId] = useState<number | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
 
   // Supplier form
   const [sName, setSName] = useState('');
@@ -110,7 +122,9 @@ export default function LandlordMaintenance() {
   useEffect(() => { fetchData(); }, []);
 
   const totalExpenses = financeData.expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  const approvedExpenses = financeData.expenses.filter(e => e.approval_status === 'approved').reduce((sum, e) => sum + Number(e.amount), 0);
+  const approvedExpenses = financeData.expenses
+    .filter(e => e.approval_status === 'approved' && !e.reversed_at)
+    .reduce((sum, e) => sum + Number(e.amount), 0);
   const pendingExpenses = financeData.expenses.filter(e => e.approval_status === 'pending');
   const netIncome = financeData.total_rent - approvedExpenses;
 
@@ -190,9 +204,16 @@ export default function LandlordMaintenance() {
 
   const handleAddExpense = async (e: FormEvent) => {
     e.preventDefault();
+    if (attachmentError) return;
     setSubmitting(true);
     setSubmitError('');
     try {
+      let uploadedAttachment = attachmentUrl;
+      if (attachmentFile) {
+        setUploadingAttachment(true);
+        uploadedAttachment = await api.uploadDocument(attachmentFile);
+        setAttachmentUrl(uploadedAttachment);
+      }
       await api.addExpense({
         property_id: Number(expProperty),
         supplier_id: expSupplier ? Number(expSupplier) : undefined,
@@ -200,13 +221,36 @@ export default function LandlordMaintenance() {
         amount: Number(expAmount),
         expense_date: expDate,
         description: expDesc,
+        attachment_url: uploadedAttachment || undefined,
       });
       setIsExpenseModalOpen(false);
-      setExpAmount(''); setExpDesc('');
+      setExpAmount(''); setExpDesc(''); setAttachmentFile(null); setAttachmentUrl('');
       setSuccessMessage('Expense submitted for approval.');
       await fetchData();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'The expense could not be saved.');
+    } finally {
+      setUploadingAttachment(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleReverseExpense = async () => {
+    if (reverseExpenseId === null) return;
+    if (reverseReason.trim().length < 3) {
+      setSubmitError('A reversal reason is required.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await api.reverseExpense(reverseExpenseId, reverseReason);
+      setIsReverseModalOpen(false);
+      setReverseExpenseId(null); setReverseReason('');
+      setSuccessMessage('Expense reversed. A corrective expense can be logged if needed.');
+      await fetchData();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'The expense could not be reversed.');
     } finally {
       setSubmitting(false);
     }
@@ -435,7 +479,7 @@ export default function LandlordMaintenance() {
 
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <h3 className="font-display text-lg font-bold">Expense Ledger</h3>
-              <PremiumButton onClick={() => { setSubmitError(''); setSuccessMessage(''); setExpProperty(''); setExpSupplier(''); setExpCategory('Maintenance'); setExpAmount(''); setExpDesc(''); setExpDate(new Date().toISOString().slice(0, 10)); setIsExpenseModalOpen(true); }} icon={<Plus size={14} />} size="sm">
+              <PremiumButton onClick={() => { setSubmitError(''); setSuccessMessage(''); setExpProperty(''); setExpSupplier(''); setExpCategory('Maintenance'); setExpAmount(''); setExpDesc(''); setExpDate(new Date().toISOString().slice(0, 10)); setAttachmentFile(null); setAttachmentUrl(''); setAttachmentError(''); setIsExpenseModalOpen(true); }} icon={<Plus size={14} />} size="sm">
                 Log Expense
               </PremiumButton>
             </div>
@@ -450,22 +494,41 @@ export default function LandlordMaintenance() {
                       <p className="font-bold text-black">{e.category} - {e.property_name}</p>
                       <p className="text-xs text-gray-500">{e.description} • {e.expense_date}</p>
                       {e.supplier_name && <p className="text-xs text-gray-500">Supplier: {e.supplier_name}</p>}
+                      {e.attachment_url && (
+                        <a href={e.attachment_url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 underline">
+                          View attachment
+                        </a>
+                      )}
+                      {e.reversed_at && (
+                        <p className="text-xs text-danger">
+                          Reversed by {e.reversed_by_name} on {String(e.reversed_at).slice(0, 10)}: {e.reversal_reason}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col md:flex-row gap-3 items-end md:items-center">
                       <div className={`text-xs uppercase font-bold px-2 py-1 rounded-full ${
+                        e.reversed_at ? 'bg-gray-200 text-gray-600 line-through' :
                         e.approval_status === 'approved' ? 'bg-success/10 text-success' :
                         e.approval_status === 'rejected' ? 'bg-danger/10 text-danger' :
                         'bg-warning/10 text-warning'
                       }`}>
-                        {e.approval_status.charAt(0).toUpperCase() + e.approval_status.slice(1)}
+                        {e.reversed_at ? 'Reversed' : e.approval_status.charAt(0).toUpperCase() + e.approval_status.slice(1)}
                       </div>
                       <p className="font-bold text-danger">- R {e.amount}</p>
-                      {e.approval_status === 'pending' && (
+                      {e.approval_status === 'pending' && !e.reversed_at && (
                         <button
                           onClick={() => { setApproveExpenseId(e.id); setIsApproveModalOpen(true); }}
                           className="text-xs font-bold bg-black text-gold px-2 py-1 rounded hover:opacity-90"
                         >
                           Approve / Reject
+                        </button>
+                      )}
+                      {e.approval_status === 'approved' && !e.reversed_at && (
+                        <button
+                          onClick={() => { setReverseExpenseId(e.id); setReverseReason(''); setSubmitError(''); setIsReverseModalOpen(true); }}
+                          className="text-xs font-bold border border-danger text-danger px-2 py-1 rounded hover:bg-danger/10"
+                        >
+                          Reverse
                         </button>
                       )}
                       {e.approval_status === 'rejected' && e.approved_by_name && (
@@ -623,6 +686,27 @@ export default function LandlordMaintenance() {
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
                 <input type="text" required value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="e.g. Geyser repair at Unit A1" className="w-full border p-3 rounded-lg focus:border-gold outline-none" />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Attachment (optional, PDF/image, max 10 MB)</label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    setAttachmentError('');
+                    if (file && file.size > 10 * 1024 * 1024) {
+                      setAttachmentError('The attachment must be 10 MB or smaller.');
+                      setAttachmentFile(null);
+                      e.target.value = '';
+                      return;
+                    }
+                    setAttachmentFile(file);
+                  }}
+                  className="w-full border p-2 rounded-lg bg-white text-sm file:mr-3 file:rounded-md file:border-0 file:bg-black file:px-3 file:py-1.5 file:text-gold file:text-xs file:font-bold"
+                />
+                {attachmentUrl && <p className="mt-1 text-xs text-success">Attachment uploaded.</p>}
+                {attachmentError && <p role="alert" className="mt-1 text-xs text-danger">{attachmentError}</p>}
+              </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
                 <SubmitButton loading={submitting} loadingText="Saving expense..." error={submitError}>
@@ -655,6 +739,29 @@ export default function LandlordMaintenance() {
               <textarea required minLength={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-full border p-3 rounded-lg h-20 focus:border-gold outline-none" placeholder="Why is this expense rejected?" />
               <button onClick={() => handleRejectExpense()} disabled={submitting || rejectReason.trim().length < 3} className="mt-3 w-full py-3 bg-danger text-white font-bold hover:bg-danger/90 disabled:opacity-50 rounded-lg transition-colors">
                 Reject Expense
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Reverse Expense Modal */}
+      {isReverseModalOpen && reverseExpenseId !== null && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-modal bg-ivory w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <h3 className="font-display text-xl font-bold mb-4">Reverse Expense</h3>
+            <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 mb-4">
+              <p className="text-xs text-gray-500 uppercase font-bold mb-1">Approved expense</p>
+              <p className="font-bold text-black">{financeData.expenses.find(e => e.id === reverseExpenseId)?.description}</p>
+              <p className="text-xs text-gray-500">R {financeData.expenses.find(e => e.id === reverseExpenseId)?.amount}</p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">The original record stays in the ledger and no longer counts as approved spend. Reversals cannot be undone — log a corrective expense instead.</p>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reversal Reason (required)</label>
+            <textarea required minLength={3} value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} className="w-full border p-3 rounded-lg h-20 focus:border-gold outline-none" placeholder="Why is this expense being reversed?" />
+            {submitError && <p role="alert" className="mt-2 text-sm text-danger">{submitError}</p>}
+            <div className="flex gap-2 pt-4">
+              <button type="button" onClick={() => setIsReverseModalOpen(false)} disabled={submitting} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={() => handleReverseExpense()} disabled={submitting || reverseReason.trim().length < 3} className="flex-1 py-3 bg-danger text-white font-bold hover:bg-danger/90 disabled:opacity-50 rounded-lg transition-colors">
+                {submitting ? 'Reversing...' : 'Reverse Expense'}
               </button>
             </div>
           </div>

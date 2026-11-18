@@ -622,6 +622,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  reverseExpense: async (expenseId: number, reason: string) => {
+    const res = await fetchWithNetworkError(`${API_URL}/expenses.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'reverse', expense_id: expenseId, reason }),
+    });
+    return handleResponse(res);
+  },
+
   // --- SUPPLIERS ---
   getSuppliers: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/suppliers.php`, { headers: getHeaders() });
