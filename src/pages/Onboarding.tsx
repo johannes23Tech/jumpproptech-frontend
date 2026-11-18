@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, ShieldCheck, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, ShieldCheck, Upload } from 'lucide-react';
 import { api } from '../utils/api';
 import { validatePassword } from '../utils/security';
 
@@ -34,6 +34,8 @@ export default function Onboarding() {
   const [notes, setNotes] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -279,25 +281,45 @@ export default function Onboarding() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-sm font-semibold">
                     Password
-                    <input
-                      type="password"
-                      required
-                      autoComplete="new-password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
-                    />
+                    <div className="relative mt-2">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        autoComplete="new-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        className="w-full rounded-xl border border-gray-300 bg-white p-3 pr-12 font-normal outline-none focus:border-gold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </label>
                   <label className="block text-sm font-semibold">
                     Confirm password
-                    <input
-                      type="password"
-                      required
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
-                    />
+                    <div className="relative mt-2">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        className="w-full rounded-xl border border-gray-300 bg-white p-3 pr-12 font-normal outline-none focus:border-gold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </label>
                 </div>
               </section>

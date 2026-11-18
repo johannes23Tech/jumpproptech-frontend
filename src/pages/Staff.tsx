@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Plus, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { Eye, EyeOff, Plus, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import { api } from '../utils/api';
 import { validatePassword } from '../utils/security';
 import { STAFF_ROLES, STAFF_ROLE_LABELS, roleLabel } from '../config/roles';
@@ -30,6 +30,7 @@ export default function Staff() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [staffRole, setStaffRole] = useState('property_manager');
 
   const fetchStaff = async () => {
@@ -254,14 +255,24 @@ export default function Staff() {
 
           <label className="block text-sm font-semibold text-gray-700">
             Temporary password
-            <input
-              required
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
-              autoComplete="new-password"
-            />
+            <div className="relative mt-1">
+              <input
+                required
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-11"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <span className="mt-1 block text-xs font-normal text-gray-500">
               The staff member should change this after signing in.
             </span>

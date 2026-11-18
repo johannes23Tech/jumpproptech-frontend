@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../utils/api';
 import { validatePassword } from '../utils/security';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -17,6 +18,7 @@ export default function ResetPassword() {
   }, [token]);
 
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,24 @@ export default function ResetPassword() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">New Password</label>
-            <input type="password" autoComplete="new-password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-ivory focus:border-gold outline-none" />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-ivory focus:border-gold outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gold"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <p className="text-gray-500 text-xs mt-1">Use 8–12 characters with uppercase and lowercase letters, a number, and a symbol.</p>
           </div>
           

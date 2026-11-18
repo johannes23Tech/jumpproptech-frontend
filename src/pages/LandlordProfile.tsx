@@ -2,12 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
 import { validatePassword } from '../utils/security';
-import { CheckCircle, Lock } from 'lucide-react';
+import { CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 
 export default function LandlordProfile() {
   const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -64,11 +66,45 @@ export default function LandlordProfile() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Current Password</label>
-            <input type="password" autoComplete="current-password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full border p-3 pr-12 rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+              >
+                {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
-            <input type="password" autoComplete="new-password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border p-3 rounded-lg" />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full border p-3 pr-12 rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+              >
+                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <p className="text-gray-500 text-xs mt-1">Use 8–12 characters with uppercase and lowercase letters, a number, and a symbol.</p>
           </div>
           <button type="submit" className="w-full bg-gold text-black font-bold py-3 rounded-lg mt-2 hover:opacity-90 transition-opacity">Update Password</button>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, KeyRound, Copy, Check, AlertTriangle, Download } from 'lucide-react';
+import { ShieldCheck, KeyRound, Copy, Check, AlertTriangle, Download, Eye, EyeOff } from 'lucide-react';
 
 export default function Security() {
   const { user, refreshToken } = useAuth();
@@ -17,7 +17,9 @@ export default function Security() {
 
   const [password, setPassword] = useState('');
   const [disableCode, setDisableCode] = useState('');
-
+  const [showSetupPassword, setShowSetupPassword] = useState(false);
+  const [showDisablePassword, setShowDisablePassword] = useState(false);
+  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
@@ -166,14 +168,24 @@ export default function Security() {
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                 Confirm your password
               </label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={setupPassword}
-                onChange={(e) => setSetupPassword(e.target.value)}
-                className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-gold"
-                placeholder="Current password"
-              />
+              <div className="relative">
+                <input
+                  type={showSetupPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={setupPassword}
+                  onChange={(e) => setSetupPassword(e.target.value)}
+                  className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-11 focus:outline-none focus:border-gold"
+                  placeholder="Current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSetupPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                  aria-label={showSetupPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showSetupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <button
               type="submit"
@@ -246,14 +258,24 @@ export default function Security() {
               You need your password and a current code (or a recovery code).
             </p>
             <form onSubmit={disableMfa} className="mt-3 grid sm:grid-cols-2 gap-3">
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Current password"
-                className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-gold"
-              />
+              <div className="relative">
+                <input
+                  type={showDisablePassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Current password"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-11 focus:outline-none focus:border-gold"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDisablePassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-black"
+                  aria-label={showDisablePassword ? 'Hide password' : 'Show password'}
+                >
+                  {showDisablePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <input
                 type="text"
                 autoComplete="one-time-code"
