@@ -67,3 +67,13 @@ export const hasPermission = (user: PermissionUser | null, permission: string): 
     user.role === 'super_administrator' ||
     user.role === 'superadmin';
 };
+
+export const isSuperAdminUser = (user: PermissionUser | null): boolean =>
+  !!user && (
+    user.staff_role === 'super_administrator' ||
+    user.role === 'super_administrator' ||
+    user.role === 'superadmin'
+  );
+
+export const isAdministratorUser = (user: PermissionUser | null): boolean =>
+  !!user && (user.staff_role === 'administrator' || user.role === 'administrator' || user.role === 'admin');

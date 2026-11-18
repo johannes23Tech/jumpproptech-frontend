@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
-import { hasPermission, isTenantUser, roleLabel } from '../config/roles';
+import { hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser, roleLabel } from '../config/roles';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -29,8 +29,33 @@ export default function Layout({ children }: { children: ReactNode }) {
   };
 
   const isTenant = isTenantUser(user);
+  const isSuperAdmin = isSuperAdminUser(user);
+  const isAdministrator = isAdministratorUser(user);
 
-  // Landlord Navigation (The first 5 will show on mobile)
+  // Super Admin: tech/sensitive Control Center only (no day-to-day ops).
+  const superAdminNav = [
+    { name: 'Control Center', path: '/control-center', icon: ShieldAlert },
+    ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
+    { name: 'Security', path: '/security', icon: ShieldCheck },
+  ];
+
+  // Administrator: separate admin dashboard + operational/admin duties.
+  const adminNav = [
+    { name: 'Admin Dashboard', path: '/administrator', icon: LayoutDashboard },
+    { name: 'Properties', path: '/properties', icon: Building2 },
+    { name: 'Units', path: '/units', icon: Key },
+    { name: 'Tenants', path: '/tenants', icon: Users },
+    ...(hasPermission(user, 'applications.view') ? [{ name: 'Applications', path: '/applications', icon: ClipboardList }] : []),
+    ...((hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) ? [{ name: 'Tenancy', path: '/tenancy', icon: FileText }] : []),
+    { name: 'Rent', path: '/rent', icon: Wallet },
+    { name: 'Maintenance', path: '/maintenance', icon: Wrench },
+    ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
+    { name: 'Messages', path: '/messages', icon: MessageSquare },
+    ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
+    { name: 'Security', path: '/security', icon: ShieldCheck },
+  ];
+
+  // Operational staff Navigation (property/finance/maintenance/etc.)
   const ownerNav = [
     { name: 'Dashboard', path: '/manage', icon: LayoutDashboard },
     { name: 'Properties', path: '/properties', icon: Building2 },
@@ -42,12 +67,10 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
-  // QR onboarding applications are visible to staff with review/read access.
   if (hasPermission(user, 'applications.view')) {
     ownerNav.splice(4, 0, { name: 'Applications', path: '/applications', icon: ClipboardList });
   }
 
-  // Tenancy workspace: leases, deposits and inspections.
   if (hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) {
     const tenancyIndex = ownerNav.findIndex((item) => item.path === '/rent');
     ownerNav.splice(tenancyIndex === -1 ? ownerNav.length : tenancyIndex, 0, {
@@ -57,7 +80,6 @@ export default function Layout({ children }: { children: ReactNode }) {
     });
   }
 
-  // Budgets are visible to staff with budget read access.
   if (hasPermission(user, 'budgets.view')) {
     const maintenanceIndex = ownerNav.findIndex((item) => item.path === '/maintenance');
     ownerNav.splice(maintenanceIndex === -1 ? ownerNav.length : maintenanceIndex + 1, 0, {
@@ -67,17 +89,11 @@ export default function Layout({ children }: { children: ReactNode }) {
     });
   }
 
-  // Add Admin Portal link for super administrators.
-  if (hasPermission(user, 'settings.manage')) {
-    ownerNav.push({ name: 'Admin Portal', path: '/admin', icon: ShieldAlert });
-  }
-
-  // Staff management is permission-gated on the server too.
-  if (hasPermission(user, 'staff.manage')) {
+  if (hasPermission(user, 'staff.manage') && !ownerNav.some(i => i.path === '/staff')) {
     ownerNav.push({ name: 'Staff', path: '/staff', icon: Users });
   }
 
-  // Tenant Navigation (Exactly 5 for the mobile bottom bar)
+  // Tenant Navigation
   const tenantNav = [
     { name: 'Home', path: '/tenant-dashboard', icon: LayoutDashboard },
     { name: 'Payments', path: '/payments', icon: CreditCard },
@@ -86,21 +102,32 @@ export default function Layout({ children }: { children: ReactNode }) {
     { name: 'Profile', path: '/profile', icon: UserCircle },
   ];
 
-  // For Desktop, we add the extra Tenant pages that don't fit in the bottom bar
   const desktopTenantNav = [
-    ...tenantNav.slice(0, 4), // Home, Payments, Maintenance, Messages
+    ...tenantNav.slice(0, 4),
     { name: 'Lease & Docs', path: '/documents', icon: FileText },
-    ...tenantNav.slice(4), // Profile
+    ...tenantNav.slice(4),
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
-  const navItems = isTenant ? desktopTenantNav : ownerNav;
+  const navItems = isTenant
+    ? desktopTenantNav
+    : isSuperAdmin
+      ? superAdminNav
+      : isAdministrator
+        ? adminNav
+        : ownerNav;
+
   const primaryMobilePaths = isTenant
     ? ['/tenant-dashboard', '/payments', '/maintenance', '/messages']
-    : ['/manage', '/tenants', '/rent', '/maintenance'];
+    : isSuperAdmin
+      ? ['/control-center', '/staff', '/security']
+      : isAdministrator
+        ? ['/administrator', '/properties', '/tenants', '/maintenance']
+        : ['/manage', '/tenants', '/rent', '/maintenance'];
+
   const mobileNavItems = navItems.filter(item => primaryMobilePaths.includes(item.path));
   const moreNavItems = navItems.filter(item => !primaryMobilePaths.includes(item.path));
-  if (!isTenant) {
+  if (!isTenant && !isSuperAdmin) {
     moreNavItems.push({ name: 'My Account', path: '/landlord-profile', icon: UserCircle });
   }
 
@@ -113,7 +140,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div>
             <h1 className="font-display text-lg">Jump PropTech</h1>
             <p className="text-[9px] tracking-widest text-gold uppercase">
-              {isTenant ? 'Tenant Portal' : hasPermission(user, 'settings.manage') ? 'System Admin' : 'Property Management'}
+              {isTenant ? 'Tenant Portal' : isSuperAdmin ? 'Control Center' : isAdministrator ? 'Administration' : 'Property Management'}
             </p>
           </div>
         </div>
@@ -177,7 +204,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                       >
                         <UserCircle size={16} /> My Profile
                       </Link>
-                    ) : (
+                    ) : !isSuperAdmin ? (
                       <Link 
                         to="/landlord-profile" 
                         onClick={() => setIsMenuOpen(false)}
@@ -185,7 +212,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                       >
                         <UserCircle size={16} /> My Account
                       </Link>
-                    )}
+                    ) : null}
                     <Link
                       to="/security"
                       onClick={() => setIsMenuOpen(false)}

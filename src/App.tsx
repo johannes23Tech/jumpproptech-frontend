@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import LogoReveal from './components/LogoReveal';
-import { hasPermission, isTenantUser } from './config/roles';
+import { hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser } from './config/roles';
 
 // Instantly load critical UI
 import Login from './pages/Login';
@@ -25,6 +25,7 @@ const TenantProfile = lazy(() => import('./pages/TenantProfile'));
 const LandlordMaintenance = lazy(() => import('./pages/LandlordMaintenance'));
 const LandlordProfile = lazy(() => import('./pages/LandlordProfile'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const AdministratorDashboard = lazy(() => import('./pages/AdministratorDashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Security = lazy(() => import('./pages/Security'));
 const Staff = lazy(() => import('./pages/Staff'));
@@ -43,12 +44,20 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 const OwnerRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   if (isTenantUser(user)) return <Navigate to="/tenant-dashboard" />;
+  if (isSuperAdminUser(user)) return <Navigate to="/control-center" />;
   return <>{children}</>;
 };
 
 const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  if (!hasPermission(user, 'settings.manage')) return <Navigate to="/manage" />;
+  if (!isSuperAdminUser(user)) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const AdministratorRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (isSuperAdminUser(user)) return <Navigate to="/control-center" />;
+  if (!isAdministratorUser(user)) return <Navigate to="/manage" />;
   return <>{children}</>;
 };
 
@@ -81,7 +90,13 @@ const BudgetsRoute = ({ children }: { children: ReactNode }) => {
 function AppRoutes() {
   const { user } = useAuth();
   const isTenant = isTenantUser(user);
-  const signedInHome = isTenant ? '/tenant-dashboard' : '/manage';
+  const signedInHome = isTenant
+    ? '/tenant-dashboard'
+    : isSuperAdminUser(user)
+      ? '/control-center'
+      : isAdministratorUser(user)
+        ? '/administrator'
+        : '/manage';
 
   return (
     <Suspense fallback={
@@ -102,7 +117,7 @@ function AppRoutes() {
         <Route path="/apply/:token" element={<Onboarding />} />
         
         {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
-        <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <Dashboard />}</ProtectedRoute>} />
+        <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : isSuperAdminUser(user) ? <Navigate to="/control-center" replace /> : isAdministratorUser(user) ? <Navigate to="/administrator" replace /> : <Dashboard />}</ProtectedRoute>} />
         <Route path="/tenant-dashboard" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
         
         <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
@@ -127,7 +142,9 @@ function AppRoutes() {
         <Route path="/budgets" element={<ProtectedRoute><OwnerRoute><BudgetsRoute><Budgets /></BudgetsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
+        <Route path="/control-center" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><Navigate to="/control-center" replace /></SuperAdminRoute></ProtectedRoute>} />
+        <Route path="/administrator" element={<ProtectedRoute><AdministratorRoute><AdministratorDashboard /></AdministratorRoute></ProtectedRoute>} />
         <Route path="/staff" element={<ProtectedRoute><StaffRoute><Staff /></StaffRoute></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

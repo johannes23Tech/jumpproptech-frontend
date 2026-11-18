@@ -872,6 +872,98 @@ export const api = {
     return secureUrl;
   },
 
+  // --- CONTROL CENTER (Super Administrator) ---
+  getControlCenterOverview: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/overview.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getControlCenterAccounts: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)); });
+    const url = `${API_URL}/control_center/accounts.php${qs.toString() ? `?${qs}` : ''}`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  controlCenterAccountAction: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/accounts.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  getControlCenterAudit: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)); });
+    const url = `${API_URL}/control_center/audit.php${qs.toString() ? `?${qs}` : ''}`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getControlCenterSessions: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)); });
+    const url = `${API_URL}/control_center/sessions.php${qs.toString() ? `?${qs}` : ''}`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  controlCenterSessionAction: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/sessions.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  getControlCenterTokens: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)); });
+    const url = `${API_URL}/control_center/tokens.php${qs.toString() ? `?${qs}` : ''}`;
+    const res = await fetchWithNetworkError(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  controlCenterTokenAction: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/tokens.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  getControlCenterPermissions: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/permissions.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  downloadControlCenterExport: async (type: 'accounts' | 'audit', format: 'csv' | 'json' = 'csv') => {
+    const token = localStorage.getItem('token');
+    const res = await fetchWithNetworkError(`${API_URL}/control_center/export.php?type=${type}&format=${format}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = 'Export failed.';
+      try { const data = JSON.parse(text); msg = data.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}_export.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   // --- LOCAL STORAGE ---
   getUser: () => {
     const user = localStorage.getItem('user');
