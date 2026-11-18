@@ -20,22 +20,33 @@ export default function Modal({ isOpen, onClose, title, subtitle, children }: Mo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="bg-ivory w-full max-w-2xl rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh] md:max-h-[85vh]">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div className="bg-ivory w-full max-w-2xl rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh] md:max-h-[85vh] border border-white/10">
         
         {/* Header */}
-        <div className="bg-charcoal px-6 py-5 flex justify-between items-center shrink-0">
-          <div>
+        <div className="bg-gradient-to-r from-charcoal to-black px-6 py-5 flex justify-between items-center shrink-0 border-b border-gold/20">
+          <div className="min-w-0 pr-4">
             {subtitle && <p className="text-gold text-[10px] tracking-[0.2em] uppercase font-bold mb-1">{subtitle}</p>}
-            <h3 className="font-display text-xl md:text-2xl text-ivory font-bold">{title}</h3>
+            <h3 className="font-display text-xl md:text-2xl text-ivory font-bold truncate">{title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+          >
             <X size={20} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6 overflow-y-auto bg-gradient-to-b from-ivory to-white">
           {children}
         </div>
       </div>

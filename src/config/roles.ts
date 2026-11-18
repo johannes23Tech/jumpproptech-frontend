@@ -77,3 +77,17 @@ export const isSuperAdminUser = (user: PermissionUser | null): boolean =>
 
 export const isAdministratorUser = (user: PermissionUser | null): boolean =>
   !!user && (user.staff_role === 'administrator' || user.role === 'administrator' || user.role === 'admin');
+
+export const effectiveStaffRole = (user: PermissionUser | null): StaffRole | null => {
+  if (!user) return null;
+  const sr = user.staff_role;
+  if (isStaffRole(sr)) return sr;
+  const r = user.role;
+  if (isStaffRole(r)) return r;
+  // legacy mappings
+  if (r === 'superadmin') return 'super_administrator';
+  if (r === 'admin') return 'administrator';
+  if (r === 'landlord' || r === 'agent') return 'property_manager';
+  if (r === 'maintenance') return 'maintenance_technician';
+  return null;
+};

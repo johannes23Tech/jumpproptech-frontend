@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import LogoReveal from './components/LogoReveal';
-import { hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser } from './config/roles';
+import { effectiveStaffRole, hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser } from './config/roles';
 
 // Instantly load critical UI
 import Login from './pages/Login';
@@ -12,7 +12,12 @@ import ResetPassword from './pages/ResetPassword';
 import Layout from './components/Layout';
 
 // LAZY LOAD PAGES (Code Splitting)
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const PropertyManagerDashboard = lazy(() => import('./pages/PropertyManagerDashboard'));
+const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
+const MaintenanceManagerDashboard = lazy(() => import('./pages/MaintenanceManagerDashboard'));
+const MaintenanceTechnicianDashboard = lazy(() => import('./pages/MaintenanceTechnicianDashboard'));
+const ReceptionSupportDashboard = lazy(() => import('./pages/ReceptionSupportDashboard'));
+const AuditorDashboard = lazy(() => import('./pages/AuditorDashboard'));
 const Properties = lazy(() => import('./pages/Properties'));
 const Units = lazy(() => import('./pages/Units'));
 const Tenants = lazy(() => import('./pages/Tenants'));
@@ -88,6 +93,66 @@ const BudgetsRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const PropertiesRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'properties.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const UnitsRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'units.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const TenantsRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'tenants.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const RentRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'payments.view') && !hasPermission(user, 'arrears.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const StaffMaintenanceRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'maintenance.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const MessagesRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'messages.view') && !hasPermission(user, 'flux.use')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+function StaffHomeDashboard() {
+  const { user } = useAuth();
+  const role = effectiveStaffRole(user);
+  if (isSuperAdminUser(user)) return <Navigate to="/control-center" replace />;
+  if (isAdministratorUser(user)) return <Navigate to="/administrator" replace />;
+  switch (role) {
+    case 'finance_accountant':
+      return <FinanceDashboard />;
+    case 'maintenance_manager':
+      return <MaintenanceManagerDashboard />;
+    case 'maintenance_technician':
+      return <MaintenanceTechnicianDashboard />;
+    case 'reception_support':
+      return <ReceptionSupportDashboard />;
+    case 'auditor':
+      return <AuditorDashboard />;
+    case 'property_manager':
+      return <PropertyManagerDashboard />;
+    default:
+      // Dedicated dashboards for operational staff; safe fallback for unknown staff
+      return <PropertyManagerDashboard />;
+  }
+}
+
 function AppRoutes() {
   const { user } = useAuth();
   const isTenant = isTenantUser(user);
@@ -117,8 +182,8 @@ function AppRoutes() {
         {/* Public, unit-scoped QR onboarding. Never requires a session. */}
         <Route path="/apply/:token" element={<Onboarding />} />
         
-        {/* THE FIX: Render Dashboard for Landlords, TenantDashboard for Tenants */}
-        <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : isSuperAdminUser(user) ? <Navigate to="/control-center" replace /> : isAdministratorUser(user) ? <Navigate to="/administrator" replace /> : <Dashboard />}</ProtectedRoute>} />
+        {/* Role-based home dashboards */}
+        <Route path="/manage" element={<ProtectedRoute>{isTenant ? <TenantDashboard /> : <StaffHomeDashboard />}</ProtectedRoute>} />
         <Route path="/tenant-dashboard" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
         
         <Route path="/documents" element={<ProtectedRoute><TenantDocuments /></ProtectedRoute>} />
@@ -127,19 +192,19 @@ function AppRoutes() {
 
         <Route path="/maintenance" element={
           <ProtectedRoute>
-            {isTenant ? <TenantMaintenance /> : <OwnerRoute><LandlordMaintenance /></OwnerRoute>}
+            {isTenant ? <TenantMaintenance /> : <OwnerRoute><StaffMaintenanceRoute><LandlordMaintenance /></StaffMaintenanceRoute></OwnerRoute>}
           </ProtectedRoute>
         } />
 
-        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-        <Route path="/messages/:tenantId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute>{isTenant ? <Messages /> : <MessagesRoute><Messages /></MessagesRoute>}</ProtectedRoute>} />
+        <Route path="/messages/:tenantId" element={<ProtectedRoute>{isTenant ? <Messages /> : <MessagesRoute><Messages /></MessagesRoute>}</ProtectedRoute>} />
 
-        <Route path="/properties" element={<ProtectedRoute><OwnerRoute><Properties /></OwnerRoute></ProtectedRoute>} />
-        <Route path="/units" element={<ProtectedRoute><OwnerRoute><Units /></OwnerRoute></ProtectedRoute>} />
-        <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><Tenants /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/properties" element={<ProtectedRoute><OwnerRoute><PropertiesRoute><Properties /></PropertiesRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/units" element={<ProtectedRoute><OwnerRoute><UnitsRoute><Units /></UnitsRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/tenants" element={<ProtectedRoute><OwnerRoute><TenantsRoute><Tenants /></TenantsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute><OwnerRoute><ApplicationsRoute><Applications /></ApplicationsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/tenancy" element={<ProtectedRoute><OwnerRoute><TenancyRoute><Tenancy /></TenancyRoute></OwnerRoute></ProtectedRoute>} />
-        <Route path="/rent" element={<ProtectedRoute><OwnerRoute><Rent /></OwnerRoute></ProtectedRoute>} />
+        <Route path="/rent" element={<ProtectedRoute><OwnerRoute><RentRoute><Rent /></RentRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/budgets" element={<ProtectedRoute><OwnerRoute><BudgetsRoute><Budgets /></BudgetsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />

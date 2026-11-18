@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
-import { hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser, roleLabel } from '../config/roles';
+import { effectiveStaffRole, hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser, roleLabel } from '../config/roles';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -42,56 +42,34 @@ export default function Layout({ children }: { children: ReactNode }) {
   // Administrator: separate admin dashboard + operational/admin duties.
   const adminNav = [
     { name: 'Admin Dashboard', path: '/administrator', icon: LayoutDashboard },
-    { name: 'Properties', path: '/properties', icon: Building2 },
-    { name: 'Units', path: '/units', icon: Key },
-    { name: 'Tenants', path: '/tenants', icon: Users },
+    ...(hasPermission(user, 'properties.view') ? [{ name: 'Properties', path: '/properties', icon: Building2 }] : []),
+    ...(hasPermission(user, 'units.view') ? [{ name: 'Units', path: '/units', icon: Key }] : []),
+    ...(hasPermission(user, 'tenants.view') ? [{ name: 'Tenants', path: '/tenants', icon: Users }] : []),
     ...(hasPermission(user, 'applications.view') ? [{ name: 'Applications', path: '/applications', icon: ClipboardList }] : []),
     ...((hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) ? [{ name: 'Tenancy', path: '/tenancy', icon: FileText }] : []),
-    { name: 'Rent', path: '/rent', icon: Wallet },
-    { name: 'Maintenance', path: '/maintenance', icon: Wrench },
+    ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
+    ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
     ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
-    { name: 'Messages', path: '/messages', icon: MessageSquare },
+    ...((hasPermission(user, 'messages.view') || hasPermission(user, 'flux.use')) ? [{ name: 'Messages', path: '/messages', icon: MessageSquare }] : []),
     ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
-  // Operational staff Navigation (property/finance/maintenance/etc.)
-  const ownerNav = [
+  // Operational staff navigation: permission/role-filtered per staff role.
+  const staffNav = [
     { name: 'Dashboard', path: '/manage', icon: LayoutDashboard },
-    { name: 'Properties', path: '/properties', icon: Building2 },
-    { name: 'Units', path: '/units', icon: Key },
-    { name: 'Tenants', path: '/tenants', icon: Users },
-    { name: 'Rent', path: '/rent', icon: Wallet },
-    { name: 'Maintenance', path: '/maintenance', icon: Wrench },
-    { name: 'Messages', path: '/messages', icon: MessageSquare },
+    ...(hasPermission(user, 'properties.view') ? [{ name: 'Properties', path: '/properties', icon: Building2 }] : []),
+    ...(hasPermission(user, 'units.view') ? [{ name: 'Units', path: '/units', icon: Key }] : []),
+    ...(hasPermission(user, 'tenants.view') ? [{ name: 'Tenants', path: '/tenants', icon: Users }] : []),
+    ...(hasPermission(user, 'applications.view') ? [{ name: 'Applications', path: '/applications', icon: ClipboardList }] : []),
+    ...((hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) ? [{ name: 'Tenancy', path: '/tenancy', icon: FileText }] : []),
+    ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
+    ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
+    ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
+    ...((hasPermission(user, 'messages.view') || hasPermission(user, 'flux.use')) ? [{ name: 'Messages', path: '/messages', icon: MessageSquare }] : []),
+    ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
-
-  if (hasPermission(user, 'applications.view')) {
-    ownerNav.splice(4, 0, { name: 'Applications', path: '/applications', icon: ClipboardList });
-  }
-
-  if (hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) {
-    const tenancyIndex = ownerNav.findIndex((item) => item.path === '/rent');
-    ownerNav.splice(tenancyIndex === -1 ? ownerNav.length : tenancyIndex, 0, {
-      name: 'Tenancy',
-      path: '/tenancy',
-      icon: FileText,
-    });
-  }
-
-  if (hasPermission(user, 'budgets.view')) {
-    const maintenanceIndex = ownerNav.findIndex((item) => item.path === '/maintenance');
-    ownerNav.splice(maintenanceIndex === -1 ? ownerNav.length : maintenanceIndex + 1, 0, {
-      name: 'Budgets',
-      path: '/budgets',
-      icon: DollarSign,
-    });
-  }
-
-  if (hasPermission(user, 'staff.manage') && !ownerNav.some(i => i.path === '/staff')) {
-    ownerNav.push({ name: 'Staff', path: '/staff', icon: Users });
-  }
 
   // Tenant Navigation
   const tenantNav = [
@@ -115,21 +93,44 @@ export default function Layout({ children }: { children: ReactNode }) {
       ? superAdminNav
       : isAdministrator
         ? adminNav
-        : ownerNav;
+        : staffNav;
 
+  const role = effectiveStaffRole(user);
   const primaryMobilePaths = isTenant
     ? ['/tenant-dashboard', '/payments', '/maintenance', '/messages']
     : isSuperAdmin
       ? ['/control-center', '/staff', '/security']
       : isAdministrator
         ? ['/administrator', '/properties', '/tenants', '/maintenance']
-        : ['/manage', '/tenants', '/rent', '/maintenance'];
+        : role === 'finance_accountant'
+          ? ['/manage', '/rent', '/budgets', '/messages']
+          : role === 'maintenance_manager'
+            ? ['/manage', '/maintenance', '/budgets', '/messages']
+            : role === 'maintenance_technician'
+              ? ['/manage', '/maintenance', '/messages', '/security']
+              : role === 'reception_support'
+                ? ['/manage', '/applications', '/tenants', '/messages']
+                : role === 'auditor'
+                  ? ['/manage', '/rent', '/maintenance', '/messages']
+                  : ['/manage', '/properties', '/tenants', '/maintenance'];
 
-  const mobileNavItems = navItems.filter(item => primaryMobilePaths.includes(item.path));
-  const moreNavItems = navItems.filter(item => !primaryMobilePaths.includes(item.path));
+  let mobileNavItems = navItems.filter(item => primaryMobilePaths.includes(item.path));
+  if (mobileNavItems.length < 2) {
+    mobileNavItems = navItems.slice(0, 4);
+  }
+  const mobilePathsSet = new Set(mobileNavItems.map(i => i.path));
+  const moreNavItems = navItems.filter(item => !mobilePathsSet.has(item.path));
   if (!isTenant && !isSuperAdmin) {
     moreNavItems.push({ name: 'My Account', path: '/landlord-profile', icon: UserCircle });
   }
+
+  const portalLabel = isTenant
+    ? 'Tenant Portal'
+    : isSuperAdmin
+      ? 'Control Center'
+      : isAdministrator
+        ? 'Administration'
+        : roleLabel(role || user?.staff_role || user?.role);
 
   return (
     <div className="flex min-h-screen bg-ivory">
@@ -140,14 +141,14 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div>
             <h1 className="font-display text-lg">Jump PropTech</h1>
             <p className="text-[9px] tracking-widest text-gold uppercase">
-              {isTenant ? 'Tenant Portal' : isSuperAdmin ? 'Control Center' : isAdministrator ? 'Administration' : 'Property Management'}
+              {portalLabel}
             </p>
           </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.path === '/manage' || item.path === '/tenant-dashboard'
+            const isActive = item.path === '/manage' || item.path === '/tenant-dashboard' || item.path === '/administrator' || item.path === '/control-center'
               ? location.pathname === item.path
               : location.pathname.startsWith(item.path);
 
@@ -176,7 +177,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main className="flex-1 md:ml-64 pb-20 md:pb-8 flex flex-col">
         <header className="sticky top-0 z-30 bg-ivory/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 md:px-8 md:py-4 flex justify-between items-center">
           <h1 className="font-display text-xl md:text-2xl capitalize text-black">
-            {location.pathname === '/' ? (isTenant ? 'Dashboard' : 'Dashboard') : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
+            {location.pathname === '/manage' || location.pathname === '/tenant-dashboard' || location.pathname === '/administrator' || location.pathname === '/control-center'
+              ? 'Dashboard'
+              : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
           </h1>
           
           {/* Avatar Dropdown Menu */}
