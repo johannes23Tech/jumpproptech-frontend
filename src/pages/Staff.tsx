@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Plus, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import { validatePassword } from '../utils/security';
 import { STAFF_ROLES, STAFF_ROLE_LABELS, roleLabel } from '../config/roles';
@@ -18,6 +19,7 @@ type StaffMember = {
 };
 
 export default function Staff() {
+  const navigate = useNavigate();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -136,7 +138,20 @@ export default function Staff() {
           {staff.map((member) => {
             const active = member.is_active === undefined ? true : Boolean(Number(member.is_active));
             return (
-              <article key={member.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <article
+                key={member.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/staff/${member.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/staff/${member.id}`);
+                  }
+                }}
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-premium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold/40"
+                aria-label={`Open staff account for ${member.full_name}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -154,13 +169,15 @@ export default function Staff() {
                     <p className="mt-1 text-xs font-semibold text-gray-500">
                       {roleLabel(member.staff_role || member.role)}
                     </p>
+                    <p className="mt-2 text-xs font-semibold text-gold">Click to view details, edit, or delete</p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <label className="text-xs font-semibold text-gray-500">
                       Role
                       <select
                         value={member.staff_role || ''}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(event) => void updateMember(member, { staff_role: event.target.value })}
                         className="ml-2 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-black"
                         aria-label={`Role for ${member.full_name}`}
@@ -176,7 +193,10 @@ export default function Staff() {
 
                     <button
                       type="button"
-                      onClick={() => void updateMember(member, { is_active: !active })}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void updateMember(member, { is_active: !active });
+                      }}
                       className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
                         active ? 'bg-danger/10 text-danger hover:bg-danger/20' : 'bg-success/10 text-success hover:bg-success/20'
                       }`}

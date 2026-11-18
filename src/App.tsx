@@ -29,6 +29,7 @@ const AdministratorDashboard = lazy(() => import('./pages/AdministratorDashboard
 const Messages = lazy(() => import('./pages/Messages'));
 const Security = lazy(() => import('./pages/Security'));
 const Staff = lazy(() => import('./pages/Staff'));
+const StaffDetail = lazy(() => import('./pages/StaffDetail'));
 const Applications = lazy(() => import('./pages/Applications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Tenancy = lazy(() => import('./pages/Tenancy'));
@@ -146,6 +147,7 @@ function AppRoutes() {
         <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><Navigate to="/control-center" replace /></SuperAdminRoute></ProtectedRoute>} />
         <Route path="/administrator" element={<ProtectedRoute><AdministratorRoute><AdministratorDashboard /></AdministratorRoute></ProtectedRoute>} />
         <Route path="/staff" element={<ProtectedRoute><StaffRoute><Staff /></StaffRoute></ProtectedRoute>} />
+        <Route path="/staff/:id" element={<ProtectedRoute><StaffRoute><StaffDetail /></StaffRoute></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

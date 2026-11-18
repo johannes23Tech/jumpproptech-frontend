@@ -768,6 +768,11 @@ export const api = {
     return handleResponse(res);
   },
 
+  getStaffMember: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/staff.php?id=${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
   createStaff: async (data: {
     full_name: string; email: string; phone?: string; password: string; staff_role: string;
   }) => {
@@ -779,11 +784,28 @@ export const api = {
     return handleResponse(res);
   },
 
-  updateStaff: async (data: { id: number; staff_role?: string; is_active?: boolean }) => {
+  updateStaff: async (data: {
+    id: number;
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    password?: string;
+    staff_role?: string;
+    is_active?: boolean;
+  }) => {
     const res = await fetchWithNetworkError(`${API_URL}/staff.php`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  deleteStaff: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/staff.php`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      body: JSON.stringify({ id }),
     });
     return handleResponse(res);
   },
