@@ -90,6 +90,44 @@ function mapServerMessage(m: any): ChatMessage {
   };
 }
 
+type FluxUiSpec =
+  | { type: 'choices' | 'multi'; label?: string; options: string[] }
+  | { type: 'select'; label?: string; options: string[] };
+
+function parseFluxUi(text: string): { cleanText: string; ui: FluxUiSpec | null; fallbackOptions: string[] } {
+  let cleanText = text || '';
+  let ui: FluxUiSpec | null = null;
+
+  const blockRe = /```(?:flux-ui|ui|json-ui)\s*([\s\S]*?)```/i;
+  const m = cleanText.match(blockRe);
+  if (m) {
+    try {
+      const parsed = JSON.parse(m[1]);
+      if (parsed && Array.isArray(parsed.options)) {
+        const options = parsed.options.map((o: any) => String(o)).filter((s: string) => s.trim() !== '');
+        const type = parsed.type === 'select' ? 'select' : parsed.type === 'multi' ? 'multi' : 'choices';
+        if (options.length > 0) ui = { type, label: typeof parsed.label === 'string' ? parsed.label : undefined, options };
+      }
+    } catch {
+      // ignore invalid UI block
+    }
+    cleanText = cleanText.replace(blockRe, '').trim();
+  }
+
+  // Fallback: detect simple option lists near the end (bullets or numbered)
+  const fallbackOptions: string[] = [];
+  if (!ui) {
+    const lines = cleanText.split('\n').map((l) => l.trim()).filter(Boolean);
+    const tail = lines.slice(-8);
+    const opts = tail
+      .map((l) => l.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/)?.[1]?.trim() || '')
+      .filter((s) => s.length > 0 && s.length <= 80);
+    if (opts.length >= 2 && opts.length <= 8) fallbackOptions.push(...opts);
+  }
+
+  return { cleanText, ui, fallbackOptions };
+}
+
 function mapServerConversation(c: any): Conversation {
   return {
     id: c.id,
@@ -518,13 +556,83 @@ export default function Messages() {
                   const isUser = msg.role === 'user';
                   const isLastAssistant = msg.role === 'assistant' && idx === arr.length - 1;
                   const prevUser = [...arr].slice(0, idx).reverse().find((m) => m.role === 'user');
+                  const parsed = !isUser ? parseFluxUi(msg.text) : null;
+                  const displayText = parsed ? parsed.cleanText : msg.text;
+                  const ui = parsed?.ui || null;
+                  const fallbackOptions = parsed?.fallbackOptions || [];
                   return (
                     <div key={String(msg.id)} className={`flux-msg-row ${isUser ? 'flux-msg-row--user' : 'flux-msg-row--assistant'}`}>
                       <div className={`flux-avatar ${isUser ? 'flux-avatar--user' : 'flux-avatar--ai'}`} aria-hidden="true">
                         {isUser ? (user?.full_name?.charAt(0) || 'U') : 'F'}
                       </div>
                       <div className="flux-bubble-wrap">
-                        <div className="flux-bubble">{msg.text}</div>
+                        <div className="flux-bubble">{displayText || msg.text}</div>
+
+                        {!isUser && ui && ui.options.length > 0 && (
+                          <div className="flux-ui" aria-label="Suggested options">
+                            {ui.label && <div className="flux-ui__label">{ui.label}</div>}
+                            {ui.type === 'select' ? (
+                              <select
+                                className="flux-ui__select"
+                                defaultValue=""
+                                disabled={isProcessing || initialLoading}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (!v) return;
+                                  setInput(v);
+                                  textareaRef.current?.focus();
+                                }}
+                              >
+                                <option value="">Select an option…</option>
+                                {ui.options.map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="flux-ui__choices">
+                                {ui.options.map((opt) => (
+                                  <button
+                                    key={opt}
+                                    type="button"
+                                    className="flux-ui__choice"
+                                    disabled={isProcessing || initialLoading}
+                                    onClick={() => {
+                                      if (ui.type === 'multi') {
+                                        setInput((prev) => (prev ? `${prev}, ${opt}` : opt));
+                                        textareaRef.current?.focus();
+                                      } else {
+                                        setInput(opt);
+                                        textareaRef.current?.focus();
+                                      }
+                                    }}
+                                  >
+                                    {opt}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {!isUser && !ui && fallbackOptions.length >= 2 && isLastAssistant && (
+                          <div className="flux-ui" aria-label="Quick replies">
+                            <div className="flux-ui__label">Quick options</div>
+                            <div className="flux-ui__choices">
+                              {fallbackOptions.map((opt) => (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  className="flux-ui__choice"
+                                  disabled={isProcessing || initialLoading}
+                                  onClick={() => { setInput(opt); textareaRef.current?.focus(); }}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flux-msg-meta">
                           <span>{formatTime(msg.createdAt)}</span>
                           {!isUser && (
@@ -574,12 +682,38 @@ export default function Messages() {
               JUMP FLUX AI uses authorized Jump PropTech data within your role permissions. It distinguishes actual records, calculations, and suggestions, and will not take actions that change records or send communications without your explicit confirmation. General South African property information is not legal or tax advice.
             </div>
 
-            <div className="flux-suggestions" aria-label="Suggested prompts">
-              {SUGGESTED_PROMPTS.map((q) => (
-                <button key={q} type="button" className="flux-chip" disabled={isProcessing || initialLoading} onClick={() => void sendMessage(q)}>
-                  {q}
-                </button>
-              ))}
+            <div className="flux-quickbar" aria-label="Quick actions">
+              <label className="flux-quickbar__label">
+                Quick action
+                <select
+                  className="flux-quickbar__select"
+                  defaultValue=""
+                  disabled={isProcessing || initialLoading}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (!v) return;
+                    setInput(v);
+                    textareaRef.current?.focus();
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="">Choose an intent…</option>
+                  <option value="Show rent collected this month and compare to last month.">Rent collected (this month)</option>
+                  <option value="List tenants in arrears with amounts and recommended next steps.">Tenants in arrears</option>
+                  <option value="Show vacant units by property and building.">Vacant units by property</option>
+                  <option value="Summarize unresolved maintenance issues by priority.">Unresolved maintenance</option>
+                  <option value="Show total expenses this month by category.">Expenses by category</option>
+                  <option value="Which leases expire in the next 60 days?">Leases expiring soon</option>
+                  <option value="Give a portfolio performance summary with key risks and actions.">Portfolio summary</option>
+                </select>
+              </label>
+              <div className="flux-suggestions" aria-label="Suggested prompts">
+                {SUGGESTED_PROMPTS.map((q) => (
+                  <button key={q} type="button" className="flux-chip" disabled={isProcessing || initialLoading} onClick={() => void sendMessage(q)}>
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <form className="flux-composer" onSubmit={handleSubmit}>

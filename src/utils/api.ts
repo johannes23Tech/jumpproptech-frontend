@@ -208,6 +208,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  updateProperty: async (data: any) => {
+    const res = await fetchWithNetworkError(`${API_URL}/properties.php`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
   // --- UNITS / ROOMS ---
   getUnits: async () => {
     const res = await fetchWithNetworkError(`${API_URL}/units.php`, { headers: getHeaders() });
@@ -242,6 +251,15 @@ export const api = {
   createBuilding: async (data: { property_id: number; name: string; address?: string }) => {
     const res = await fetchWithNetworkError(`${API_URL}/buildings.php`, {
       method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  updateBuilding: async (data: { id: number; name?: string; address?: string }) => {
+    const res = await fetchWithNetworkError(`${API_URL}/buildings.php`, {
+      method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
