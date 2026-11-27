@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
   FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
-  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList, DollarSign
+  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList, DollarSign, FileSignature
 } from 'lucide-react';
 import InstallPWA from './InstallPWA'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
@@ -47,6 +47,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     ...(hasPermission(user, 'tenants.view') ? [{ name: 'Tenants', path: '/tenants', icon: Users }] : []),
     ...(hasPermission(user, 'applications.view') ? [{ name: 'Applications', path: '/applications', icon: ClipboardList }] : []),
     ...((hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) ? [{ name: 'Tenancy', path: '/tenancy', icon: FileText }] : []),
+    ...(hasPermission(user, 'contracts.view') ? [{ name: 'Lease Agreements', path: '/contracts', icon: FileSignature }] : []),
     ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
     ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
     ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
@@ -63,6 +64,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     ...(hasPermission(user, 'tenants.view') ? [{ name: 'Tenants', path: '/tenants', icon: Users }] : []),
     ...(hasPermission(user, 'applications.view') ? [{ name: 'Applications', path: '/applications', icon: ClipboardList }] : []),
     ...((hasPermission(user, 'leases.view') || hasPermission(user, 'deposits.view')) ? [{ name: 'Tenancy', path: '/tenancy', icon: FileText }] : []),
+    ...(hasPermission(user, 'contracts.view') ? [{ name: 'Lease Agreements', path: '/contracts', icon: FileSignature }] : []),
     ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
     ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
     ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),

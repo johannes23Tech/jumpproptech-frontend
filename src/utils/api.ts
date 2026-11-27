@@ -1074,6 +1074,56 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
+  // --- LEASE CONTRACT GENERATOR ---
+  // Legal wording is always fetched from management-approved templates.
+  getContracts: async (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') qs.set(key, String(value));
+    });
+    const suffix = qs.toString() ? `?${qs}` : '';
+    const res = await fetchWithNetworkError(`${API_URL}/contracts.php${suffix}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getContractStats: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/contracts.php?view=stats`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  getContract: async (id: number) => {
+    const res = await fetchWithNetworkError(`${API_URL}/contracts.php?id=${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  contractAction: async (data: Record<string, unknown>) => {
+    const res = await fetchWithNetworkError(`${API_URL}/contracts.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  getContractTemplates: async () => {
+    const res = await fetchWithNetworkError(`${API_URL}/contract_templates.php`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  saveContractTemplate: async (data: Record<string, unknown>) => {
+    const res = await fetchWithNetworkError(`${API_URL}/contract_templates.php`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  getContractDocument: async (id: number, type: 'generated' | 'signed' = 'generated') => {
+    const res = await fetchWithNetworkError(`${API_URL}/contract_documents.php?id=${id}&type=${type}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
   // --- LOCAL STORAGE ---
   getUser: () => {
     const user = localStorage.getItem('user');

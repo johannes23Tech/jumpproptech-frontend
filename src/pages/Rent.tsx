@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../config/roles';
-import { AlertCircle, Banknote, CheckCircle, Clock, CreditCard, ExternalLink, Mail, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Banknote, CheckCircle, Clock, CreditCard, ExternalLink, Mail, RotateCcw, Search, ShieldCheck, Wallet, RefreshCw } from 'lucide-react';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
+import TiltCard from '../components/TiltCard';
+import Skeleton from '../components/Skeleton';
 
 type RentStatus =
   | 'Pending'
@@ -55,13 +57,13 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 const STATUS_STYLES: Record<string, string> = {
-  Paid: 'bg-success/10 text-success',
-  Pending: 'bg-warning/10 text-warning',
-  Overdue: 'bg-danger/10 text-danger',
-  Submitted: 'bg-blue-50 text-blue-700',
-  PendingVerification: 'bg-blue-50 text-blue-700',
-  Rejected: 'bg-danger/10 text-danger',
-  Reversed: 'bg-gray-100 text-gray-600',
+  Paid: 'bg-success/10 text-success border-success/20',
+  Pending: 'bg-warning/10 text-warning border-warning/20',
+  Overdue: 'bg-danger/10 text-danger border-danger/20',
+  Submitted: 'bg-blue-50 text-blue-700 border-blue-200',
+  PendingVerification: 'bg-blue-50 text-blue-700 border-blue-200',
+  Rejected: 'bg-danger/10 text-danger border-danger/20',
+  Reversed: 'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 const isUnpaid = (record: RentRecord): boolean =>
@@ -85,6 +87,7 @@ export default function Rent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<RentRecord | null>(null);
   const [mode, setMode] = useState<'cash' | 'verify' | 'reject' | 'reverse' | null>(null);
   const [reason, setReason] = useState('');
@@ -112,21 +115,32 @@ export default function Rent() {
   }, []);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return records.filter((record) => {
+      let byFilter = true;
       switch (filter) {
         case 'unpaid':
-          return isUnpaid(record);
+          byFilter = isUnpaid(record);
+          break;
         case 'verification':
-          return record.effective_status === 'Submitted' || record.effective_status === 'PendingVerification';
+          byFilter = record.effective_status === 'Submitted' || record.effective_status === 'PendingVerification';
+          break;
         case 'paid':
-          return record.effective_status === 'Paid';
+          byFilter = record.effective_status === 'Paid';
+          break;
         case 'arrears':
-          return record.effective_status === 'Overdue';
+          byFilter = record.effective_status === 'Overdue';
+          break;
         default:
-          return true;
+          byFilter = true;
       }
+      if (!byFilter) return false;
+      if (!q) return true;
+      const hay = [record.tenant_name, record.tenant_email, record.property_name, record.unit_number, record.month_for, record.receipt_number, record.effective_status]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
     });
-  }, [records, filter]);
+  }, [records, filter, search]);
 
   const emailReceipt = async (record: RentRecord) => {
     if (!record.receipt_number || !record.tenant_email || emailingId !== null) return;
@@ -189,108 +203,149 @@ export default function Rent() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading rent records...</div>;
-
   const proof = selected?.payments?.find((payment) => payment.status === 'submitted') ?? selected?.payments?.[0] ?? null;
   const unpaidCount = records.filter(isUnpaid).length;
   const verificationCount = records.filter(
     (record) => record.effective_status === 'Submitted' || record.effective_status === 'PendingVerification',
   ).length;
+  const paidCount = records.filter((r) => r.effective_status === 'Paid').length;
+  const arrearsCount = records.filter((r) => r.effective_status === 'Overdue').length;
+  const totalOutstanding = useMemo(() => records.filter(isUnpaid).reduce((sum, r) => sum + Number(r.amount || 0), 0), [records]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 animate-fade-in">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl font-bold">Rent</h2>
-          <p className="text-sm text-gray-500">
-            {unpaidCount} unpaid · {verificationCount} awaiting EFT verification
-          </p>
+      <div className="bg-gradient-to-r from-charcoal via-black to-charcoal p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl border border-gray-800">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-gold opacity-10 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs text-gold tracking-widest uppercase mb-2 font-semibold"><Wallet size={14} /> Rent & Payments</p>
+            <h1 className="font-display text-3xl md:text-4xl text-ivory mb-2">Collections & Verification</h1>
+            <p className="text-gray-400 text-sm max-w-2xl">Record cash, verify EFT proofs, manage arrears and issue receipts. Full payments only · ZAR (en-ZA).</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur px-4 py-3 min-w-[160px]">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Outstanding</p>
+              <p className="font-display text-2xl text-ivory font-bold">{money(totalOutstanding)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setLoading(true); void fetchRent(); }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 text-ivory px-4 py-3 text-sm font-semibold hover:bg-white/10 transition-colors"
+            >
+              <RefreshCw size={16} /> Refresh
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => { setLoading(true); void fetchRent(); }}
-          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          Refresh
-        </button>
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-2">
-        {FILTERS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setFilter(option.id)}
-            aria-pressed={filter === option.id}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-              filter === option.id
-                ? 'bg-black text-gold'
-                : 'border border-gray-200 bg-white text-gray-500 hover:border-gray-400'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {loading ? <><Skeleton /><Skeleton /><Skeleton /><Skeleton /></> : <>
+          <TiltCard><div className="flex items-center gap-2 text-warning mb-1"><Clock size={16} /><p className="text-xs font-bold uppercase tracking-wider">Unpaid</p></div><p className="font-display text-3xl font-bold text-black">{unpaidCount}</p><p className="text-xs text-gray-500 mt-1">Pending / overdue items</p></TiltCard>
+          <TiltCard><div className="flex items-center gap-2 text-blue-600 mb-1"><ShieldCheck size={16} /><p className="text-xs font-bold uppercase tracking-wider">Awaiting verification</p></div><p className="font-display text-3xl font-bold text-black">{verificationCount}</p><p className="text-xs text-gray-500 mt-1">EFT proofs to review</p></TiltCard>
+          <TiltCard><div className="flex items-center gap-2 text-danger mb-1"><AlertCircle size={16} /><p className="text-xs font-bold uppercase tracking-wider">Arrears</p></div><p className="font-display text-3xl font-bold text-black">{arrearsCount}</p><p className="text-xs text-gray-500 mt-1">Overdue obligations</p></TiltCard>
+          <TiltCard><div className="flex items-center gap-2 text-success mb-1"><CheckCircle size={16} /><p className="text-xs font-bold uppercase tracking-wider">Paid</p></div><p className="font-display text-3xl font-bold text-black">{paidCount}</p><p className="text-xs text-gray-500 mt-1">Receipted payments</p></TiltCard>
+        </>}
       </div>
 
-      {loadError ? (
-        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-danger/20 bg-danger/10 p-5 text-danger sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-premium space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tenant, property, unit, month or receipt..."
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-gold focus:bg-white transition-colors"
+              aria-label="Search rent records"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setFilter(option.id)}
+                aria-pressed={filter === option.id}
+                className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border ${
+                  filter === option.id
+                    ? 'bg-black text-gold border-black shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">Showing {filtered.length} of {records.length} record(s). {unpaidCount} unpaid · {verificationCount} awaiting EFT verification.</p>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"><Skeleton /><Skeleton /><Skeleton /></div>
+      ) : loadError ? (
+        <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-danger/20 bg-danger/10 p-5 text-danger sm:flex-row sm:items-center sm:justify-between">
           <span>{loadError}</span>
           <button type="button" onClick={() => { setLoading(true); void fetchRent(); }} className="font-bold underline">
             Try again
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          No rent records in this view.
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center">
+          <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400"><Wallet size={24} /></div>
+          <h3 className="font-display text-xl font-bold text-black mb-1">No rent records found</h3>
+          <p className="text-sm text-gray-500">No records match your current filters or search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((record) => {
             const status = record.effective_status;
             const pendingProof = record.payments?.find((payment) => payment.status === 'submitted') ?? null;
             return (
-              <div key={record.id} className="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div key={record.id} className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-premium hover:border-gold/20">
                 <div>
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-display text-lg font-bold">{record.tenant_name}</h3>
-                      <p className="text-xs text-gray-500">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-display text-lg font-bold text-black truncate">{record.tenant_name}</h3>
+                      <p className="text-xs text-gray-500 truncate">
                         {record.property_name} · Unit {record.unit_number}
                       </p>
                     </div>
-                    <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase shrink-0 ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                       {status === 'Paid' ? <CheckCircle size={12} /> : status === 'Overdue' ? <AlertCircle size={12} /> : <Clock size={12} />}
                       {status.replace(/_/g, ' ')}
                     </span>
                   </div>
 
-                  <div className="mt-4">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      {formatMonth(record.month_for)}
-                    </p>
-                    <p className="font-display text-2xl font-bold text-black">{money(record.amount)}</p>
-                    <p className="mt-1 text-xs text-gray-500">
+                  <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                          {formatMonth(record.month_for)}
+                        </p>
+                        <p className="font-display text-2xl font-bold text-black">{money(record.amount)}</p>
+                      </div>
+                      {record.receipt_number && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500 bg-white border border-gray-200 rounded-lg px-2 py-1">Receipt {record.receipt_number}</span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
                       Due {record.due_date ?? record.month_for}
                       {record.paid_date ? ` · Paid ${record.paid_date}` : ''}
                     </p>
-                    {record.receipt_number && (
-                      <p className="mt-1 text-xs font-semibold text-gray-600">Receipt {record.receipt_number}</p>
-                    )}
                   </div>
 
                   {pendingProof && (
-                    <div className="mt-3 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
+                    <div className="mt-3 rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800">
                       <p className="font-semibold">EFT proof submitted {new Date(pendingProof.submitted_at).toLocaleDateString('en-ZA')}</p>
-                      {pendingProof.reference && <p>Reference: {pendingProof.reference}</p>}
+                      {pendingProof.reference && <p className="mt-0.5">Reference: {pendingProof.reference}</p>}
                       {pendingProof.proof_url && (
                         <a
                           href={pendingProof.proof_url}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="mt-1 inline-flex items-center gap-1 font-bold underline"
+                          className="mt-2 inline-flex items-center gap-1 font-bold underline hover:no-underline"
                         >
                           View proof <ExternalLink size={12} />
                         </a>
@@ -299,9 +354,10 @@ export default function Rent() {
                   )}
 
                   {record.payments?.[0]?.status === 'rejected' && record.payments[0].rejection_reason && (
-                    <p className="mt-3 rounded-lg bg-danger/5 p-3 text-xs text-danger">
-                      Rejected: {record.payments[0].rejection_reason}
-                    </p>
+                    <div className="mt-3 rounded-xl bg-danger/5 border border-danger/20 p-3 text-xs text-danger">
+                      <p className="font-semibold mb-0.5">Rejected proof</p>
+                      <p>{record.payments[0].rejection_reason}</p>
+                    </div>
                   )}
                 </div>
 
@@ -310,7 +366,7 @@ export default function Rent() {
                     <button
                       type="button"
                       onClick={() => openModal(record, 'cash')}
-                      className="flex items-center gap-2 rounded-lg bg-gold px-3 py-2 text-xs font-bold text-black hover:opacity-90"
+                      className="inline-flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black hover:opacity-90 transition-opacity"
                     >
                       <Banknote size={14} /> Record cash
                     </button>
@@ -320,14 +376,14 @@ export default function Rent() {
                       <button
                         type="button"
                         onClick={() => openModal(record, 'verify')}
-                        className="flex items-center gap-2 rounded-lg bg-gold px-3 py-2 text-xs font-bold text-black hover:opacity-90"
+                        className="inline-flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black hover:opacity-90 transition-opacity"
                       >
                         <ShieldCheck size={14} /> Verify EFT
                       </button>
                       <button
                         type="button"
                         onClick={() => openModal(record, 'reject')}
-                        className="rounded-lg border border-danger/30 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/5"
+                        className="rounded-xl border border-danger/30 bg-danger/5 px-3.5 py-2 text-xs font-semibold text-danger hover:bg-danger/10 transition-colors"
                       >
                         Reject
                       </button>
@@ -339,7 +395,7 @@ export default function Rent() {
                         type="button"
                         onClick={() => void emailReceipt(record)}
                         disabled={emailingId === record.id || !record.tenant_email}
-                        className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                       >
                         <Mail size={14} /> {emailingId === record.id ? 'Emailing...' : 'Email receipt'}
                       </button>
@@ -347,7 +403,7 @@ export default function Rent() {
                         <button
                           type="button"
                           onClick={() => openModal(record, 'reverse')}
-                          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                           <RotateCcw size={14} /> Reverse
                         </button>
@@ -355,7 +411,7 @@ export default function Rent() {
                     </>
                   )}
                   {status !== 'Paid' && !canRecordCash && !pendingProof && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 py-1">
                       {status === 'Submitted' || status === 'PendingVerification'
                         ? 'Awaiting finance verification.'
                         : 'You do not have permission to record payments.'}
@@ -384,41 +440,42 @@ export default function Rent() {
       >
         {selected && mode && (
           <div className="space-y-5">
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-sm font-bold text-gray-500">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4">
+              <p className="text-sm font-bold text-gray-600">
                 {selected.tenant_name} · Unit {selected.unit_number}
               </p>
-              <p className="mt-1 font-display text-2xl font-bold">{money(selected.amount)}</p>
+              <p className="mt-1 font-display text-2xl font-bold text-black">{money(selected.amount)}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {formatMonth(selected.month_for)} · due {selected.due_date ?? selected.month_for}
               </p>
             </div>
 
             {mode === 'cash' && (
-              <>
-                <p className="flex items-center gap-2 text-sm text-gray-600">
-                  <Banknote size={16} /> Confirm you have counted and received the full cash amount. A sequential receipt will be issued.
+              <div className="rounded-xl border border-gold/20 bg-gold/10 p-4 space-y-2">
+                <p className="flex items-start gap-2 text-sm text-gray-700">
+                  <Banknote size={16} className="text-gold mt-0.5 shrink-0" /> Confirm you have counted and received the <strong>full</strong> cash amount. A sequential receipt will be issued.
                 </p>
-                <p className="text-xs text-gray-500">No partial rent payments are accepted.</p>
-              </>
+                <p className="text-xs text-gray-600">No partial rent payments are accepted. Cash must be recorded by authorized staff only.</p>
+              </div>
             )}
 
             {mode === 'verify' && (
-              <>
-                <p className="flex items-center gap-2 text-sm text-gray-600">
-                  <CreditCard size={16} /> Confirm the EFT cleared in the company bank account before verifying. Uploading proof alone is not proof of payment.
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                <p className="flex items-start gap-2 text-sm text-blue-900">
+                  <CreditCard size={16} className="mt-0.5 shrink-0" /> Confirm the EFT cleared in the company bank account before verifying. Uploading proof alone is not proof of payment.
                 </p>
                 {proof?.proof_url && (
-                  <a href={proof.proof_url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-sm font-bold text-gold underline">
+                  <a href={proof.proof_url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-sm font-bold text-blue-700 underline hover:no-underline">
                     View submitted proof <ExternalLink size={14} />
                   </a>
                 )}
-                <p className="text-xs text-gray-500">Verifying issues a sequential receipt.</p>
-              </>
+                {proof?.reference && <p className="text-xs text-blue-800">Reference: <strong>{proof.reference}</strong></p>}
+                <p className="text-xs text-blue-800">Verifying issues a sequential receipt (RCP-YYYY-NNNNNN).</p>
+              </div>
             )}
 
             {(mode === 'reject' || mode === 'reverse') && (
-              <label className="block text-sm font-semibold">
+              <label className="block text-sm font-semibold text-gray-700">
                 {mode === 'reject' ? 'Rejection reason' : 'Reversal reason'}
                 <textarea
                   required
@@ -426,25 +483,28 @@ export default function Rent() {
                   maxLength={500}
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  className="mt-2 h-24 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
+                  placeholder={mode === 'reject' ? 'Explain why this proof cannot be accepted...' : 'Explain why this payment must be reversed...'}
+                  className="mt-2 h-28 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                 />
+                <span className="mt-1 block text-xs text-gray-500 font-normal">{reason.trim().length}/500 characters (min 3)</span>
               </label>
             )}
 
             {mode === 'reverse' && (
-              <p className="rounded-lg bg-danger/5 p-3 text-xs text-danger">
-                Reversing keeps the record and voids the receipt; the receipt number is never reused or renumbered.
-              </p>
+              <div className="rounded-xl bg-danger/5 border border-danger/20 p-4 text-xs text-danger">
+                <p className="font-semibold mb-1">Important: audit-safe reversal</p>
+                <p>Reversing keeps the record and voids the receipt; the receipt number is never reused or renumbered. A reason is required.</p>
+              </div>
             )}
 
-            {modalError && <p role="alert" className="text-sm text-danger">{modalError}</p>}
+            {modalError && <p role="alert" className="rounded-lg bg-danger/10 border border-danger/20 p-3 text-sm text-danger">{modalError}</p>}
 
             <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row">
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="flex-1 rounded-xl border border-gray-300 py-3 font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                className="flex-1 rounded-xl border border-gray-300 py-3 font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>
@@ -452,7 +512,7 @@ export default function Rent() {
                 type="button"
                 onClick={() => void submit()}
                 disabled={submitting || ((mode === 'reject' || mode === 'reverse') && reason.trim().length < 3)}
-                className="flex-1 rounded-xl bg-gold py-3 font-bold text-black hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-xl bg-gold py-3 font-bold text-black hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-opacity"
               >
                 {submitting
                   ? 'Saving...'

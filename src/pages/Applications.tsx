@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Eye, FileText, RefreshCw, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Eye, FileText, RefreshCw, Search, XCircle, ClipboardList, Clock, BadgeCheck, Ban } from 'lucide-react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../config/roles';
 import Modal from '../components/Modal';
-import PremiumButton from '../components/PremiumButton';
+import TiltCard from '../components/TiltCard';
+import Skeleton from '../components/Skeleton';
 import { PageBanner, SubmitButton } from '../components/FormFeedback';
 
 type ApplicationDocument = {
@@ -37,10 +38,10 @@ type Application = {
 };
 
 const STATUS_STYLES: Record<Application['status'], string> = {
-  submitted: 'bg-warning/10 text-warning',
-  reviewing: 'bg-blue-50 text-blue-700',
-  approved: 'bg-success/10 text-success',
-  rejected: 'bg-danger/10 text-danger',
+  submitted: 'bg-warning/10 text-warning border-warning/20',
+  reviewing: 'bg-blue-50 text-blue-700 border-blue-200',
+  approved: 'bg-success/10 text-success border-success/20',
+  rejected: 'bg-danger/10 text-danger border-danger/20',
 };
 
 const FILTERS = ['all', 'submitted', 'reviewing', 'approved', 'rejected'] as const;
@@ -58,6 +59,7 @@ export default function Applications() {
 
   const [applications, setApplications] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -152,121 +154,170 @@ export default function Applications() {
     }
   };
 
+  const counts = useMemo(() => {
+    const base = { all: applications.length, submitted: 0, reviewing: 0, approved: 0, rejected: 0 } as Record<Filter, number>;
+    for (const a of applications) base[a.status] = (base[a.status] || 0) + 1;
+    return base;
+  }, [applications]);
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return applications;
+    return applications.filter((a) => {
+      const hay = [a.full_name, a.email, a.phone, a.property_name, a.building_name, a.unit_number, a.status, `APP-${String(a.id).padStart(6, '0')}`]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }, [applications, search]);
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-6">
       {successMessage && <PageBanner message={successMessage} onDismiss={() => setSuccessMessage('')} />}
       {loadError && (
-        <div role="alert" className="mb-6 rounded-xl border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
+        <div role="alert" className="rounded-xl border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
           {loadError}
         </div>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-bold">Applications</h2>
-          <p className="text-sm text-gray-500">QR onboarding applications awaiting management review.</p>
+      <div className="bg-gradient-to-r from-charcoal via-black to-charcoal p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl border border-gray-800">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-gold opacity-10 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs text-gold tracking-widest uppercase mb-2 font-semibold"><ClipboardList size={14} /> Onboarding Applications</p>
+            <h1 className="font-display text-3xl md:text-4xl text-ivory mb-2">Applications Review</h1>
+            <p className="text-gray-400 text-sm max-w-2xl">Track and process QR onboarding applications. Review details, verify documents, and approve or reject with clear reasons.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchApplications()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 text-ivory px-4 py-2.5 text-sm font-semibold hover:bg-white/10 transition-colors"
+          >
+            <RefreshCw size={16} /> Refresh
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void fetchApplications()}
-          className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <RefreshCw size={16} /> Refresh
-        </button>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {FILTERS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setFilter(option)}
-            aria-pressed={filter === option}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-              filter === option ? 'bg-black text-gold' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            {option}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <TiltCard><div className="flex items-center gap-2 text-warning mb-1"><Clock size={16} /><p className="text-xs font-bold uppercase tracking-wider">Submitted</p></div><p className="font-display text-3xl font-bold text-black">{loading ? '…' : counts.submitted}</p></TiltCard>
+        <TiltCard><div className="flex items-center gap-2 text-blue-600 mb-1"><Eye size={16} /><p className="text-xs font-bold uppercase tracking-wider">Reviewing</p></div><p className="font-display text-3xl font-bold text-black">{loading ? '…' : counts.reviewing}</p></TiltCard>
+        <TiltCard><div className="flex items-center gap-2 text-success mb-1"><BadgeCheck size={16} /><p className="text-xs font-bold uppercase tracking-wider">Approved</p></div><p className="font-display text-3xl font-bold text-black">{loading ? '…' : counts.approved}</p></TiltCard>
+        <TiltCard><div className="flex items-center gap-2 text-danger mb-1"><Ban size={16} /><p className="text-xs font-bold uppercase tracking-wider">Rejected</p></div><p className="font-display text-3xl font-bold text-black">{loading ? '…' : counts.rejected}</p></TiltCard>
+      </div>
+
+      <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-premium space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search applicant, email, property, unit or application ID..."
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-gold focus:bg-white transition-colors"
+              aria-label="Search applications"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setFilter(option)}
+                aria-pressed={filter === option}
+                className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border ${
+                  filter === option ? 'bg-black text-gold border-black shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">Showing {visible.length} application(s){filter !== 'all' ? ` in "${filter}"` : ''}.</p>
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading applications...</p>
-      ) : applications.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          No applications in this view.
+        <div className="space-y-4"><Skeleton type="row" /><Skeleton type="row" /><Skeleton type="row" /></div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center">
+          <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400"><ClipboardList size={24} /></div>
+          <h3 className="font-display text-xl font-bold text-black mb-1">No applications found</h3>
+          <p className="text-sm text-gray-500">There are no applications matching your current filters or search.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {applications.map((application) => (
+          {visible.map((application) => (
             <article
               key={application.id}
-              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 shadow-sm hover:shadow-premium hover:border-gold/20 transition-all"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-display text-lg font-bold">{application.full_name}</h3>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_STYLES[application.status]}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h3 className="font-display text-xl font-bold text-black">{application.full_name}</h3>
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[application.status]}`}>
                       {application.status}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm text-gray-600 font-medium">
                     {application.property_name}
                     {application.building_name ? ` · ${application.building_name}` : ''} · Unit {application.unit_number}
                   </p>
+                  <p className="text-xs text-gray-400 mt-1">APP-{String(application.id).padStart(6, '0')} · Submitted {new Date(application.created_at).toLocaleDateString('en-ZA')}</p>
                 </div>
-                <p className="text-xs text-gray-400">APP-{String(application.id).padStart(6, '0')}</p>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Monthly rent</p>
+                  <p className="font-display text-xl font-bold text-black">R {Number(application.unit_rent || 0).toLocaleString('en-ZA')}</p>
+                </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2">
-                <p><span className="font-semibold text-black">Email:</span> {application.email}</p>
-                <p><span className="font-semibold text-black">Phone:</span> {application.phone}</p>
-                <p><span className="font-semibold text-black">Occupants:</span> {application.occupants}</p>
-                <p><span className="font-semibold text-black">ID number:</span> {application.id_number || 'Not provided'}</p>
-                {application.emergency_contact_name && (
-                  <p>
-                    <span className="font-semibold text-black">Emergency contact:</span>{' '}
-                    {application.emergency_contact_name}
-                    {application.emergency_contact_phone ? ` (${application.emergency_contact_phone})` : ''}
-                  </p>
-                )}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Email</p><p className="text-sm text-gray-800 break-all">{application.email}</p></div>
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Phone</p><p className="text-sm text-gray-800">{application.phone}</p></div>
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Occupants</p><p className="text-sm text-gray-800 font-semibold">{application.occupants}</p></div>
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">ID number</p><p className="text-sm text-gray-800">{application.id_number || 'Not provided'}</p></div>
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 sm:col-span-2 lg:col-span-2"><p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Emergency contact</p><p className="text-sm text-gray-800">{application.emergency_contact_name ? `${application.emergency_contact_name}${application.emergency_contact_phone ? ` (${application.emergency_contact_phone})` : ''}` : 'Not provided'}</p></div>
               </div>
 
               {application.notes && (
-                <p className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">{application.notes}</p>
+                <div className="mt-3 rounded-xl bg-ivory border border-gray-100 p-4">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Applicant notes</p>
+                  <p className="text-sm text-gray-700">{application.notes}</p>
+                </div>
               )}
 
               {application.rejection_reason && (
-                <p className="mt-3 rounded-lg bg-danger/5 p-3 text-sm text-danger">
-                  Rejected: {application.rejection_reason}
-                </p>
+                <div className="mt-3 rounded-xl bg-danger/5 border border-danger/20 p-4">
+                  <p className="text-[10px] uppercase tracking-wider text-danger font-bold mb-1">Rejection reason</p>
+                  <p className="text-sm text-danger">{application.rejection_reason}</p>
+                </div>
               )}
 
               {application.documents.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {application.documents.map((document) => (
-                    <a
-                      key={document.url}
-                      href={document.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                    >
-                      <FileText size={14} /> {document.type.replace(/_/g, ' ')}
-                    </a>
-                  ))}
+                <div className="mt-4">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-2">Documents</p>
+                  <div className="flex flex-wrap gap-2">
+                    {application.documents.map((document) => (
+                      <a
+                        key={document.url}
+                        href={document.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:border-gold/30 transition-colors"
+                      >
+                        <FileText size={14} className="text-gold" /> {document.type.replace(/_/g, ' ')}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {canReview && (application.status === 'submitted' || application.status === 'reviewing') && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+                <div className="mt-5 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
                   {application.status === 'submitted' && (
                     <button
                       type="button"
                       onClick={() => void markReviewing(application)}
-                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Eye size={16} /> Start review
                     </button>
@@ -274,14 +325,14 @@ export default function Applications() {
                   <button
                     type="button"
                     onClick={() => openAction(application, 'approve')}
-                    className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-sm font-bold text-black hover:opacity-90"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-black hover:opacity-90 transition-opacity shadow-sm"
                   >
                     <CheckCircle2 size={16} /> Approve
                   </button>
                   <button
                     type="button"
                     onClick={() => openAction(application, 'reject')}
-                    className="flex items-center gap-2 rounded-lg border border-danger/30 px-4 py-2 text-sm font-semibold text-danger hover:bg-danger/5"
+                    className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-semibold text-danger hover:bg-danger/10 transition-colors"
                   >
                     <XCircle size={16} /> Reject
                   </button>
@@ -307,10 +358,11 @@ export default function Applications() {
         >
           {action === 'approve' ? (
             <>
-              <p className="text-sm text-gray-600">
-                Approving creates the tenant account, tenancy record and first rent obligation.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-gold/20 bg-gold/10 p-4 text-sm text-gray-700">
+                <p className="font-semibold text-black mb-1">What happens on approval</p>
+                <p>Approving creates the tenant account, tenancy record and first rent obligation. Please confirm lease and amounts are correct (ZAR).</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block text-sm font-semibold">
                   Lease start
                   <input
@@ -318,7 +370,7 @@ export default function Applications() {
                     required
                     value={leaseStart}
                     onChange={(event) => setLeaseStart(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
+                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                   />
                 </label>
                 <label className="block text-sm font-semibold">
@@ -328,11 +380,11 @@ export default function Applications() {
                     required
                     value={leaseEnd}
                     onChange={(event) => setLeaseEnd(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
+                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block text-sm font-semibold">
                   Monthly rent (ZAR)
                   <input
@@ -342,7 +394,7 @@ export default function Applications() {
                     required
                     value={monthlyRent}
                     onChange={(event) => setMonthlyRent(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
+                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                   />
                 </label>
                 <label className="block text-sm font-semibold">
@@ -354,24 +406,31 @@ export default function Applications() {
                     required
                     value={deposit}
                     onChange={(event) => setDeposit(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
+                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                   />
                 </label>
               </div>
             </>
           ) : (
-            <label className="block text-sm font-semibold">
-              Reason
-              <textarea
-                required
-                minLength={3}
-                maxLength={500}
-                value={rejectionReason}
-                onChange={(event) => setRejectionReason(event.target.value)}
-                placeholder="Tell the applicant why this application was rejected."
-                className="mt-2 h-28 w-full rounded-lg border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold"
-              />
-            </label>
+            <>
+              <div className="rounded-xl border border-danger/20 bg-danger/5 p-4 text-sm text-gray-700">
+                <p className="font-semibold text-danger mb-1">Provide a clear reason</p>
+                <p>The applicant should understand why the application was rejected. This may be reviewed later for audit/support purposes.</p>
+              </div>
+              <label className="block text-sm font-semibold">
+                Reason
+                <textarea
+                  required
+                  minLength={3}
+                  maxLength={500}
+                  value={rejectionReason}
+                  onChange={(event) => setRejectionReason(event.target.value)}
+                  placeholder="e.g. Missing required documents, affordability concerns, or unit no longer available..."
+                  className="mt-2 h-32 w-full rounded-xl border border-gray-300 bg-white p-3 font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                />
+                <span className="mt-1 block text-xs text-gray-500 font-normal">{rejectionReason.length}/500 characters</span>
+              </label>
+            </>
           )}
 
           <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row">
@@ -379,7 +438,7 @@ export default function Applications() {
               type="button"
               onClick={closeAction}
               disabled={submitting}
-              className="flex-1 rounded-xl border border-gray-300 py-3 font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+              className="flex-1 rounded-xl border border-gray-300 py-3 font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
             >
               Cancel
             </button>

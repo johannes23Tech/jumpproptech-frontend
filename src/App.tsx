@@ -39,6 +39,10 @@ const Applications = lazy(() => import('./pages/Applications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Tenancy = lazy(() => import('./pages/Tenancy'));
 const Budgets = lazy(() => import('./pages/Budgets'));
+const Contracts = lazy(() => import('./pages/Contracts'));
+const ContractWizard = lazy(() => import('./pages/ContractWizard'));
+const ContractDetail = lazy(() => import('./pages/ContractDetail'));
+const ContractTemplates = lazy(() => import('./pages/ContractTemplates'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -90,6 +94,24 @@ const TenancyRoute = ({ children }: { children: ReactNode }) => {
 const BudgetsRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   if (!hasPermission(user, 'budgets.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const ContractsRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'contracts.view')) return <Navigate to="/manage" />;
+  return <>{children}</>;
+};
+
+const ContractsManageRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'contracts.manage')) return <Navigate to="/contracts" />;
+  return <>{children}</>;
+};
+
+const ContractTemplatesRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'templates.manage')) return <Navigate to="/contracts" />;
   return <>{children}</>;
 };
 
@@ -206,6 +228,11 @@ function AppRoutes() {
         <Route path="/tenancy" element={<ProtectedRoute><OwnerRoute><TenancyRoute><Tenancy /></TenancyRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/rent" element={<ProtectedRoute><OwnerRoute><RentRoute><Rent /></RentRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/budgets" element={<ProtectedRoute><OwnerRoute><BudgetsRoute><Budgets /></BudgetsRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/contracts" element={<ProtectedRoute><OwnerRoute><ContractsRoute><Contracts /></ContractsRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/contracts/templates" element={<ProtectedRoute><OwnerRoute><ContractTemplatesRoute><ContractTemplates /></ContractTemplatesRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/contracts/new" element={<ProtectedRoute><OwnerRoute><ContractsManageRoute><ContractWizard /></ContractsManageRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/contracts/:id/edit" element={<ProtectedRoute><OwnerRoute><ContractsManageRoute><ContractWizard /></ContractsManageRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/contracts/:id" element={<ProtectedRoute><OwnerRoute><ContractsRoute><ContractDetail /></ContractsRoute></OwnerRoute></ProtectedRoute>} />
         <Route path="/landlord-profile" element={<ProtectedRoute><OwnerRoute><LandlordProfile /></OwnerRoute></ProtectedRoute>} />
         <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
         <Route path="/control-center" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
