@@ -235,7 +235,7 @@ export async function exportContractDocx(
                 alignment: AlignmentType.CENTER,
                 children: [
                   new TextRun({ text: `Ref: ${meta.contractReference || '—'}  |  CONFIDENTIAL  |  Page `, size: 14, color: '777777' }),
-                  new PageNumber(),
+                  new TextRun({ children: [PageNumber.CURRENT], size: 14, color: '777777' }),
                 ],
               }),
               new Paragraph({

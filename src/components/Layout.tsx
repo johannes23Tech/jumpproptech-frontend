@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Building2, Key, Users, Wallet, LogOut, 
   FileText, MessageSquare, Wrench, CreditCard, UserCircle, 
-  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList, DollarSign, FileSignature
+  Download, ShieldAlert, ShieldCheck, MoreHorizontal, ClipboardList, DollarSign, FileSignature, Palette, BarChart3, ClipboardCheck
 } from 'lucide-react';
-import InstallPWA from './InstallPWA'; 
+import InstallPWA from './InstallPWA';
+import CommandPalette from './CommandPalette'; 
 import { usePWAInstall } from '../utils/usePWAInstall';
 import { effectiveStaffRole, hasPermission, isAdministratorUser, isSuperAdminUser, isTenantUser, roleLabel } from '../config/roles';
 
@@ -51,8 +52,11 @@ export default function Layout({ children }: { children: ReactNode }) {
     ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
     ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
     ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
+    ...(hasPermission(user, 'reports.view') ? [{ name: 'Analytics', path: '/analytics', icon: BarChart3 }] : []),
     ...((hasPermission(user, 'messages.view') || hasPermission(user, 'flux.use')) ? [{ name: 'Messages', path: '/messages', icon: MessageSquare }] : []),
     ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
+    { name: 'Governance', path: '/governance', icon: ClipboardCheck },
+    { name: 'Design System', path: '/design-system', icon: Palette },
     { name: 'Security', path: '/security', icon: ShieldCheck },
   ];
 
@@ -68,6 +72,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     ...((hasPermission(user, 'payments.view') || hasPermission(user, 'arrears.view')) ? [{ name: 'Rent', path: '/rent', icon: Wallet }] : []),
     ...(hasPermission(user, 'maintenance.view') ? [{ name: 'Maintenance', path: '/maintenance', icon: Wrench }] : []),
     ...(hasPermission(user, 'budgets.view') ? [{ name: 'Budgets', path: '/budgets', icon: DollarSign }] : []),
+    ...(hasPermission(user, 'reports.view') ? [{ name: 'Analytics', path: '/analytics', icon: BarChart3 }] : []),
     ...((hasPermission(user, 'messages.view') || hasPermission(user, 'flux.use')) ? [{ name: 'Messages', path: '/messages', icon: MessageSquare }] : []),
     ...(hasPermission(user, 'staff.manage') ? [{ name: 'Staff', path: '/staff', icon: Users }] : []),
     { name: 'Security', path: '/security', icon: ShieldCheck },
@@ -183,9 +188,11 @@ export default function Layout({ children }: { children: ReactNode }) {
               ? 'Dashboard'
               : location.pathname.replace('/', '').replace('-', ' ').split('/')[0]}
           </h1>
-          
-          {/* Avatar Dropdown Menu */}
-          <div className="relative">
+          <div className="flex items-center gap-3">
+            <CommandPalette items={navItems} />
+
+            {/* Avatar Dropdown Menu */}
+            <div className="relative">
             <button
               type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -248,6 +255,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </div>
               </>
             )}
+            </div>
           </div>
         </header>
         

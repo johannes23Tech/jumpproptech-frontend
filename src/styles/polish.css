@@ -1,0 +1,43 @@
+/* Application-wide visual polish. Additive: existing screens inherit it. */
+
+/* Consistent, visible keyboard focus everywhere. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #c5a059;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+::selection {
+  background: rgba(197, 160, 89, 0.28);
+  color: #171717;
+}
+
+/* Headings read as editorial rather than default UI text. */
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Calmer, more corporate table defaults for legacy tables. */
+table th {
+  letter-spacing: 0.04em;
+}
+
+/* Softer borders on the common white cards. */
+.rounded-2xl.bg-white,
+.rounded-xl.bg-white {
+  border-color: #e9e4d9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Desktop density for back-office tables without hurting mobile. */
+@media (min-width: 1024px) {
+  .ui-table tbody td { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+}

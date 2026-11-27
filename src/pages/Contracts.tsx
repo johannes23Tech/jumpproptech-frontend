@@ -20,6 +20,7 @@ import { hasPermission } from '../config/roles';
 import Modal from '../components/Modal';
 import PremiumButton from '../components/PremiumButton';
 import { PageBanner } from '../components/FormFeedback';
+import { PageHeader, StatCard } from '../components/ui';
 import ContractDocument from '../components/contracts/ContractDocument';
 import { contractFilename, money, STATUS_LABELS, STATUS_STYLES } from '../utils/contracts';
 import { exportContractDocx, exportContractPdf } from '../utils/contractExport';
@@ -178,27 +179,25 @@ export default function Contracts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold">Documents</p>
-          <h2 className="mt-1 font-display text-2xl text-charcoal md:text-3xl">Lease Agreements</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Generate, issue and manage residential lease agreements from approved templates.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canManageTemplates && (
-            <Link to="/contracts/templates">
-              <PremiumButton variant="secondary" icon={<Settings2 size={15} />}>Templates</PremiumButton>
-            </Link>
-          )}
-          {canManage && (
-            <Link to="/contracts/new">
-              <PremiumButton icon={<FilePlus2 size={15} />}>Create New Lease</PremiumButton>
-            </Link>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Documents"
+        title="Lease Agreements"
+        description="Generate, issue and manage residential lease agreements from approved templates."
+        actions={
+          <>
+            {canManageTemplates && (
+              <Link to="/contracts/templates">
+                <PremiumButton variant="secondary" icon={<Settings2 size={15} />}>Templates</PremiumButton>
+              </Link>
+            )}
+            {canManage && (
+              <Link to="/contracts/new">
+                <PremiumButton icon={<FilePlus2 size={15} />}>Create New Lease</PremiumButton>
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {success && <PageBanner message={success} onDismiss={() => setSuccess('')} />}
       {error && (
@@ -209,10 +208,7 @@ export default function Contracts() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         {STAT_CARDS.map(({ key, label }) => (
-          <div key={key} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-gray-500">{label}</p>
-            <p className="mt-1 font-display text-2xl font-bold text-charcoal">{stats?.[key] ?? 0}</p>
-          </div>
+          <StatCard key={key} label={label} value={stats?.[key] ?? 0} />
         ))}
       </div>
 

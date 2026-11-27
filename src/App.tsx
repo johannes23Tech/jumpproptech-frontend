@@ -43,6 +43,9 @@ const Contracts = lazy(() => import('./pages/Contracts'));
 const ContractWizard = lazy(() => import('./pages/ContractWizard'));
 const ContractDetail = lazy(() => import('./pages/ContractDetail'));
 const ContractTemplates = lazy(() => import('./pages/ContractTemplates'));
+const DesignSystem = lazy(() => import('./pages/DesignSystem'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Governance = lazy(() => import('./pages/Governance'));
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -112,6 +115,12 @@ const ContractsManageRoute = ({ children }: { children: ReactNode }) => {
 const ContractTemplatesRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   if (!hasPermission(user, 'templates.manage')) return <Navigate to="/contracts" />;
+  return <>{children}</>;
+};
+
+const ReportsRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!hasPermission(user, 'reports.view')) return <Navigate to="/manage" />;
   return <>{children}</>;
 };
 
@@ -238,6 +247,9 @@ function AppRoutes() {
         <Route path="/control-center" element={<ProtectedRoute><SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><SuperAdminRoute><Navigate to="/control-center" replace /></SuperAdminRoute></ProtectedRoute>} />
         <Route path="/administrator" element={<ProtectedRoute><AdministratorRoute><AdministratorDashboard /></AdministratorRoute></ProtectedRoute>} />
+        <Route path="/design-system" element={<ProtectedRoute><AdministratorRoute><DesignSystem /></AdministratorRoute></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><OwnerRoute><ReportsRoute><Analytics /></ReportsRoute></OwnerRoute></ProtectedRoute>} />
+        <Route path="/governance" element={<ProtectedRoute><AdministratorRoute><Governance /></AdministratorRoute></ProtectedRoute>} />
         <Route path="/staff" element={<ProtectedRoute><StaffRoute><Staff /></StaffRoute></ProtectedRoute>} />
         <Route path="/staff/:id" element={<ProtectedRoute><StaffRoute><StaffDetail /></StaffRoute></ProtectedRoute>} />
 

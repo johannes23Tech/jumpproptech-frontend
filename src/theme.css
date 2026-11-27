@@ -1,4 +1,5 @@
 :root {
+  /* Dark / brand surface tokens (Control Center, login, sidebar) */
   --bg-primary: #0a0a0a;
   --bg-surface: #141414;
   --bg-elevated: #1c1c1c;
@@ -13,4 +14,55 @@
   --semantic-success: #3fb27f;
   --semantic-warning: #e0a030;
   --semantic-error: #e5484d;
+
+  /* Type */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* Spacing grid (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Radii */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgba(10, 10, 10, 0.04), 0 8px 24px -12px rgba(10, 10, 10, 0.12);
+  --shadow-raised: 0 2px 6px rgba(10, 10, 10, 0.05), 0 18px 40px -18px rgba(10, 10, 10, 0.22);
+  --shadow-gold: 0 4px 14px rgba(197, 160, 89, 0.35);
+
+  /* Motion */
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 360ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layering */
+  --z-base: 0;
+  --z-sticky: 30;
+  --z-dropdown: 50;
+  --z-modal: 60;
+  --z-toast: 70;
 }
